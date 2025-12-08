@@ -16,46 +16,28 @@
   <link rel="stylesheet" href="css/map.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 
-  <!-- SEARCH UI INLINE CSS (Option-C Component) -->
+  <!-- ============================================================
+       PERMANENT SEARCH BAR (Option A / Option C Style)
+       ============================================================ -->
   <style>
-    /* Search Button */
-    #globalSearchBtn {
+    /* Search Container */
+    #globalSearchContainer {
       position: absolute;
       top: 14px;
-      right: 14px;
-      z-index: 4000;
-      background: rgba(0,0,0,0.55);
-      border: 1px solid #999;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 6px;
-      backdrop-filter: blur(4px);
-      cursor: pointer;
-      font-size: 14px;
-      transition: 0.2s;
-    }
-    #globalSearchBtn:hover {
-      background: rgba(255,255,255,0.12);
-    }
-
-    /* Search Panel */
-    #globalSearchPanel {
-      position: absolute;
-      top: 52px;
-      right: 14px;
-      width: 300px;
-      background: rgba(0,0,0,0.75);
+      left: 14px;
+      width: 320px;
+      z-index: 5000;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
       border: 1px solid #777;
       border-radius: 8px;
-      padding: 12px;
-      z-index: 4000;
-      display: none;
-      backdrop-filter: blur(6px);
+      padding: 10px;
     }
 
-    #globalSearchInput {
+    /* Search Input */
+    #mapSearchInput {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       border-radius: 6px;
       border: 1px solid #aaa;
       background: #111;
@@ -63,34 +45,36 @@
       font-size: 14px;
     }
 
-    #globalSearchResults {
+    /* Results */
+    #mapSearchResults {
       margin-top: 10px;
-      max-height: 240px;
+      max-height: 260px;
       overflow-y: auto;
-      border-top: 1px solid #666;
+      border-top: 1px solid #555;
       padding-top: 8px;
     }
 
     .search-result-item {
-      padding: 6px 8px;
+      padding: 8px;
       border-radius: 4px;
-      cursor: pointer;
-      margin-bottom: 4px;
       background: rgba(255,255,255,0.05);
+      cursor: pointer;
+      margin-bottom: 6px;
     }
     .search-result-item:hover {
       background: rgba(255,255,255,0.15);
     }
     .search-result-title {
+      font-size: 14px;
       color: #fff;
       font-weight: 600;
-      font-size: 14px;
     }
     .search-result-address {
       font-size: 12px;
       color: #ccc;
     }
   </style>
+
 </head>
 
 <body>
@@ -101,16 +85,11 @@
 <div id="map"></div>
 
 <!-- ============================================================
-     SEARCH BUTTON (Option-C)
+     PERMANENT SEARCH BAR (Option A)
 ============================================================ -->
-<button id="globalSearchBtn">Search</button>
-
-<!-- ============================================================
-     SEARCH PANEL (Option-C)
-============================================================ -->
-<div id="globalSearchPanel">
-  <input id="globalSearchInput" type="text" placeholder="Search places…">
-  <div id="globalSearchResults"></div>
+<div id="globalSearchContainer">
+  <input id="mapSearchInput" type="text" placeholder="Search for places…">
+  <div id="mapSearchResults"></div>
 </div>
 
 <!-- ============================================================
@@ -127,6 +106,7 @@
     <div class="trip-legend-row">
       <span class="legend-line" style="border-top:2px dashed #478ED3"></span> Flights
     </div>
+
     <div class="trip-legend-row">
       <span class="legend-line" style="border-top:2px solid #FF9C57"></span> Driving Route
     </div>
@@ -134,15 +114,19 @@
     <div class="trip-legend-row">
       <img src="https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/dcpin.svg"> Departure
     </div>
+
     <div class="trip-legend-row">
       <img src="https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/STARBARX.svg"> Final Destination
     </div>
+
     <div class="trip-legend-row">
       <img src="https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/CANpin.svg"> Arrival / Toronto
     </div>
+
     <div class="trip-legend-row">
       <img src="https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/MajorWP2.svg"> Major Waypoints
     </div>
+
     <div class="trip-legend-row">
       <img src="https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/waypoint.svg"> Minor Waypoints
     </div>
@@ -150,10 +134,10 @@
     <div id="legendTotalDistance">Total Distance: calculating…</div>
   </div>
 
-  <!-- Start/Reset Journey -->
+  <!-- Journey Start/Reset -->
   <button id="journeyToggle" class="trip-journey-btn">Start Journey</button>
 
-  <!-- Reset button -->
+  <!-- Static Reset -->
   <button id="resetStaticMap" style="display:none;">Reset Map</button>
 
   <!-- Legend Toggle -->
@@ -202,12 +186,14 @@
 
       <div class="details-sidebar-divider"></div>
 
+      <!-- Start Journey Button -->
       <button id="detailsSidebarStartJourney"
               class="details-sidebar-hud-btn"
               style="display:none; margin-bottom:16px; width:100%;">
         Start Journey
       </button>
 
+      <!-- HUD INSIDE SIDEBAR -->
       <div id="detailsSidebarHud" class="details-sidebar-hud">
         <div class="details-sidebar-hud-buttons">
           <button id="detailsHudPrev" class="details-sidebar-hud-btn">GO BACK</button>
@@ -255,7 +241,6 @@
       </div>
 
     </div>
-
   </div>
 </div>
 
