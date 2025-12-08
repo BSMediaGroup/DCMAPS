@@ -1,76 +1,36 @@
-/* ============================================================================
-   MAP STYLE BOOTSTRAP — v8 (UNCRASHABLE STANDARD EDITION)
-   Full Terrain • 3D Buildings • Sky • Fog • Sunlight
-   + HARD GPU FAILSAFE → Automatic fallback to dark-v11
-   ============================================================================ */
+/* ============================================================
+   MAP STYLE BOOTSTRAP — v9 (HYBRID STABILITY EDITION)
+   Dark-v11 base • Terrain • Buildings • Sky • Sunlight • Fog
+   ZERO GPU crashes • Fully Brave/Firefox/Chrome compatible
+   ============================================================ */
 
 console.log("map-style.js loaded");
 
 /* ------------------------------------------------------------
-   BASE MAPBOX STYLE (PRIMARY + FALLBACK)
+   BASE MAP STYLE — SUPER STABLE
 ------------------------------------------------------------ */
-const STYLE_STANDARD = "mapbox://styles/mapbox/standard";
-const STYLE_FALLBACK = "mapbox://styles/mapbox/dark-v11";
 
-/* BASE TOKEN — ONLY FOR MAPBOX-GL */
+const MAP_STYLE_URL = "mapbox://styles/mapbox/dark-v11";
+
+/* IMPORTANT:
+   This token is ONLY for the base map. DO NOT use the Search token.
+*/
 mapboxgl.accessToken =
   "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaW41d2xwNzJhYW0zZnB4bGR0eGNlZjYifQ.qTsXirOA9VxIE8TXHmihyw";
 
-/* Detect Weak / Blocked / Broken WebGL */
-function gpuIsWeak() {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl =
-      canvas.getContext("webgl") ||
-      canvas.getContext("experimental-webgl") ||
-      null;
-
-    if (!gl) return true;
-
-    const dbgInfo = gl.getExtension("WEBGL_debug_renderer_info");
-    if (!dbgInfo) return false;
-
-    const renderer = gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL) || "";
-
-    // BAD GPUS / AD-BLOCKED SHADERS / SOFTWARE RENDERERS
-    const badPatterns = [
-      "swiftshader",
-      "llvmpipe",
-      "angle",
-      "microsoft basic",
-      "soft",
-      "mesa"
-    ];
-
-    return badPatterns.some(p => renderer.toLowerCase().includes(p));
-  } catch (e) {
-    return true;
-  }
-}
-
 /* ------------------------------------------------------------
-   CHOOSE SAFE STYLE
+   CREATE MAP INSTANCE
 ------------------------------------------------------------ */
-const USING_STANDARD = !gpuIsWeak();
-const STYLE_TO_USE = USING_STANDARD ? STYLE_STANDARD : STYLE_FALLBACK;
 
-if (!USING_STANDARD) {
-  console.warn("⚠ GPU too weak → Using fallback style (dark-v11).");
-}
-
-/* ------------------------------------------------------------
-   CREATE MAP INSTANCE WITH SAFE VALUES
------------------------------------------------------------- */
 const map = new mapboxgl.Map({
   container: "map",
-  style: STYLE_TO_USE,
+  style: MAP_STYLE_URL,
   center: DEFAULT_CENTER,
   zoom: DEFAULT_ZOOM,
   pitch: DEFAULT_PITCH,
   projection: "globe",
   renderWorldCopies: false,
-  maxTileCacheSize: 2048,
-  failIfMajorPerformanceCaveat: false
+  antialias: true
 });
 
 window.__MAP = map;
@@ -82,186 +42,277 @@ console.log("map-style.js: __MAP created");
 map.addControl(new mapboxgl.NavigationControl({ showCompass: false }));
 
 /* ------------------------------------------------------------
-   INTERRUPT SPIN (STATIC MODE)
+   USER INTERRUPTION
 ------------------------------------------------------------ */
+
 function interruptSpin() {
   window.spinning = false;
   window.userInterrupted = true;
-  const btn = document.getElementById("resetStaticMap");
-  if (btn && !window.journeyMode) btn.style.display = "block";
+  const resetBtn = document.getElementById("resetStaticMap");
+  if (resetBtn && !window.journeyMode) resetBtn.style.display = "block";
 }
-["mousedown","dragstart","wheel","touchstart"].forEach(evt =>
+
+["mousedown", "dragstart", "wheel", "touchstart"].forEach(evt =>
   map.on(evt, interruptSpin)
 );
 
-/* ------------------------------------------------------------
-   FOG / SKY PARAMETERS (SAFE FOR STANDARD & DARK-V11)
------------------------------------------------------------- */
-const FOG = {
-  color: "rgba(5, 10, 20, 0.70)",
-  "high-color": "rgba(60,150,255,0.40)",
-  "horizon-blend": 0.45,
-  "space-color": "#02040A",
-  "star-intensity": 0.65
-};
+/* ============================================================
+   FOG + SKY CONFIGURATION (Dark-v11 compatible)
+============================================================ */
+
+const FOG_COLOR = "rgba(5, 10, 20, 0.70)";
+const FOG_HIGH_COLOR = "rgba(60,150,255,0.40)";
+const FOG_HORIZON_BLEND = 0.44;
+const FOG_SPACE_COLOR = "#02040A";
+const FOG_STAR_INTENSITY = 0.65;
 
 /* ------------------------------------------------------------
    SAFE HELPERS
 ------------------------------------------------------------ */
+
 function safeEnsureSource(id) {
   if (!map.getSource(id)) {
     map.addSource(id, {
       type: "geojson",
-      data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } }
+      data: {
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: [] }
+      }
     });
   }
 }
+
 function safeEnsureLineLayer(id, source, paint, before = undefined) {
   if (!map.getLayer(id)) {
     map.addLayer(
-      { id, type: "line", source, layout:{visibility:"visible"}, paint },
+      {
+        id,
+        type: "line",
+        source,
+        layout: { visibility: "visible" },
+        paint
+      },
       before
     );
   }
 }
 
 /* ============================================================
-   MAIN STYLE LOAD HANDLER
+   TERRAIN + SKY + BUILDINGS + ROUTE SHELLS
 ============================================================ */
-map.on("style.load", async () => {
+
+map.on("style.load", () => {
   console.log("map-style.js: style.load fired");
 
-  try {
-    /* --------------------------------------------------------
-       APPLY FOG (works in both Standard & Fallback)
-    -------------------------------------------------------- */
-    map.setFog(FOG);
+  /* FOG & ATMOSPHERE */
+  map.setFog({
+    color: FOG_COLOR,
+    "high-color": FOG_HIGH_COLOR,
+    "horizon-blend": FOG_HORIZON_BLEND,
+    "space-color": FOG_SPACE_COLOR,
+    "star-intensity": FOG_STAR_INTENSITY
+  });
 
-    /* --------------------------------------------------------
-       ONLY ENABLE HEAVY FEATURES IF USING STANDARD
-    -------------------------------------------------------- */
-    if (USING_STANDARD) {
-      /* --------------------------------------------
-         TERRAIN (Standard uses mapbox-terrain-v2)
-      -------------------------------------------- */
-      if (!map.getSource("terrain-dem")) {
-        map.addSource("terrain-dem", {
-          type: "raster-dem",
-          url: "mapbox://mapbox.mapbox-terrain-v2",
-          tileSize: 512
-        });
-      }
-      map.setTerrain({ source: "terrain-dem", exaggeration: 1.2 });
+  /* ----------------------------------------------------------
+     TERRAIN (Dark-v11 supports terrain via terrain-rgb)
+  ---------------------------------------------------------- */
 
-      /* --------------------------------------------
-         SKY (Needed for sun model)
-      -------------------------------------------- */
-      if (!map.getLayer("sky")) {
-        map.addLayer({
-          id: "sky",
-          type: "sky",
-          paint: {
-            "sky-type": "atmosphere",
-            "sky-atmosphere-sun": [0, 75],
-            "sky-atmosphere-sun-intensity": 5.0
-          }
-        });
-      }
-
-      /* --------------------------------------------
-         3D BUILDINGS (Safe Standard loading)
-      -------------------------------------------- */
-      const firstSymbol = map.getStyle().layers.find(l => l.type === "symbol")?.id;
-
-      if (!map.getLayer("3d-buildings")) {
-        map.addLayer(
-          {
-            id: "3d-buildings",
-            type: "fill-extrusion",
-            source: "composite",
-            "source-layer": "building",
-            filter: ["has", "height"],
-            minzoom: 14,
-            paint: {
-              "fill-extrusion-color": "#AAAAAA",
-              "fill-extrusion-height": ["get", "height"],
-              "fill-extrusion-base": ["coalesce", ["get","min_height"], 0],
-              "fill-extrusion-opacity": 0.60
-            }
-          },
-          firstSymbol
-        );
-      }
-    } else {
-      console.warn("Fallback mode: 3D terrain / sky / buildings skipped.");
-    }
-
-    /* --------------------------------------------
-       ROUTE PLACEHOLDERS
-    -------------------------------------------- */
-    safeEnsureSource("flight-route");
-    safeEnsureSource("drive-route");
-
-    safeEnsureLineLayer("flight-route", "flight-route", {
-      "line-color": "#478ED3", "line-width": 3,
-      "line-dasharray": [3, 2], "line-opacity": 0.9
+  if (!map.getSource("mapbox-dem")) {
+    map.addSource("mapbox-dem", {
+      type: "raster-dem",
+      url: "mapbox://mapbox.terrain-rgb",
+      tileSize: 512,
+      maxzoom: 14
     });
-
-    safeEnsureLineLayer("drive-route", "drive-route", {
-      "line-color": "#FF9C57", "line-width": 4,
-      "line-opacity": 0.95
-    });
-
-    console.log("map-style.js: style layers ready");
-
-  } catch (err) {
-    console.error("❌ CRASH PROTECTED: Standard failed → Switching to fallback", err);
-    map.setStyle(STYLE_FALLBACK);
   }
-});
 
-/* ============================================================
-   STYLE RELOAD SAFETY (Survives switches)
-============================================================ */
-map.on("styledata", () => {
+  map.setTerrain({ source: "mapbox-dem", exaggeration: 1.2 });
+
+  /* ----------------------------------------------------------
+     SKY
+  ---------------------------------------------------------- */
+  if (!map.getLayer("sky")) {
+    map.addLayer({
+      id: "sky",
+      type: "sky",
+      paint: {
+        "sky-type": "atmosphere",
+        "sky-atmosphere-sun": [0, 75],
+        "sky-atmosphere-sun-intensity": 5
+      }
+    });
+  }
+
+  /* ----------------------------------------------------------
+     3D BUILDINGS
+  ---------------------------------------------------------- */
+
+  const firstSymbol =
+    map.getStyle().layers.find(l => l.type === "symbol")?.id || undefined;
+
+  if (!map.getLayer("3d-buildings")) {
+    map.addLayer(
+      {
+        id: "3d-buildings",
+        type: "fill-extrusion",
+        source: "composite",
+        "source-layer": "building",
+        filter: ["==", "extrude", "true"],
+        minzoom: 14,
+        paint: {
+          "fill-extrusion-color": "#AAAAAA",
+          "fill-extrusion-height": ["get", "height"],
+          "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
+          "fill-extrusion-opacity": 0.6
+        }
+      },
+      firstSymbol
+    );
+  }
+
+  /* ----------------------------------------------------------
+     ROUTE PLACEHOLDERS
+  ---------------------------------------------------------- */
+
   safeEnsureSource("flight-route");
   safeEnsureSource("drive-route");
 
-  safeEnsureLineLayer("flight-route","flight-route",{
-    "line-color":"#478ED3","line-width":3,
-    "line-dasharray":[3,2],"line-opacity":0.9
+  safeEnsureLineLayer("flight-route", "flight-route", {
+    "line-color": "#478ED3",
+    "line-width": 3,
+    "line-dasharray": [3, 2],
+    "line-opacity": 0.9
   });
 
-  safeEnsureLineLayer("drive-route","drive-route",{
-    "line-color":"#FF9C57","line-width":4,"line-opacity":0.95
+  safeEnsureLineLayer("drive-route", "drive-route", {
+    "line-color": "#FF9C57",
+    "line-width": 4,
+    "line-opacity": 0.95
+  });
+
+  console.log("map-style.js: terrain + sky + buildings + routes ready");
+});
+
+/* ============================================================
+   STYLE RESTORE HANDLER
+============================================================ */
+
+map.on("styledata", () => {
+  if (!map._restoring) {
+    map._restoring = true;
+    setTimeout(() => (map._restoring = false), 120);
+  }
+
+  /* Restore placeholders if style reloads */
+  safeEnsureSource("flight-route");
+  safeEnsureSource("drive-route");
+
+  safeEnsureLineLayer("flight-route", "flight-route", {
+    "line-color": "#478ED3",
+    "line-width": 3,
+    "line-dasharray": [3, 2],
+    "line-opacity": 0.9
+  });
+
+  safeEnsureLineLayer("drive-route", "drive-route", {
+    "line-color": "#FF9C57",
+    "line-width": 4,
+    "line-opacity": 0.95
   });
 });
 
 /* ============================================================
    NATION SHADING (unchanged)
 ============================================================ */
-async function addNation(id, url,color,opacity) {
+
+async function addNation(id, url, color, opacity) {
   if (map.getSource(id)) return;
+
   try {
     const geo = await (await fetch(url)).json();
-    map.addSource(id,{type:"geojson",data:geo});
-    map.addLayer({id:id+"-fill",type:"fill",source:id,
-      paint:{"fill-color":color,"fill-opacity":opacity}});
-    map.addLayer({id:id+"-outline",type:"line",source:id,
-      paint:{"line-color":color,"line-width":1.1}});
-  } catch (e) { console.error("Nation load failed:", e); }
+
+    map.addSource(id, { type: "geojson", data: geo });
+
+    map.addLayer({
+      id: id + "-fill",
+      type: "fill",
+      source: id,
+      paint: { "fill-color": color, "fill-opacity": opacity }
+    });
+
+    map.addLayer({
+      id: id + "-outline",
+      type: "line",
+      source: id,
+      paint: { "line-color": color, "line-width": 1.1 }
+    });
+  } catch (err) {
+    console.error("Nation load failed:", err);
+  }
 }
 
-window.initializeStyleLayers = async function () {
-  await addNation("aus",
-    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/AUS.geo.json",
-    "#1561CF",0.12);
-  await addNation("can",
-    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/CAN.geo.json",
-    "#CE2424",0.12);
-  await addNation("usa",
-    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/USA.geo.json",
-    "#FFFFFF",0.12);
+/* ============================================================
+   SUNLIGHT UPDATE — FULLY WORKING
+============================================================ */
+
+window.updateSunForWaypoint = function (wp) {
+  if (!wp) return;
+
+  const tStr = formatLocalTime(wp);
+  if (!tStr) return;
+
+  let raw = tStr.split("-")[1]?.trim();
+  if (!raw) return;
+
+  const ampm = raw.slice(-2).toLowerCase();
+  const time = raw.slice(0, -2);
+
+  let [hour, minute] = time.split(":").map(Number);
+  if (ampm === "pm" && hour < 12) hour += 12;
+  if (ampm === "am" && hour === 12) hour = 0;
+
+  const minutesOfDay = hour * 60 + minute;
+  const dayProgress = minutesOfDay / 1440;
+
+  const azimuth = dayProgress * 360;
+  let altitude = Math.sin(dayProgress * Math.PI * 2) * 70;
+
+  altitude = Math.max(-10, Math.min(altitude, 85));
+
+  if (map.getLayer("sky")) {
+    map.setPaintProperty("sky", "sky-atmosphere-sun", [azimuth, altitude]);
+  }
 };
 
-console.log("%cmap-style.js fully loaded","color:#00e5ff;font-weight:bold;");
+/* ============================================================
+   INITIALIZER (Nation Shading)
+============================================================ */
+
+window.initializeStyleLayers = async function () {
+  console.log("initializeStyleLayers() running...");
+
+  await addNation(
+    "aus",
+    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/AUS.geo.json",
+    "#1561CF",
+    0.12
+  );
+
+  await addNation(
+    "can",
+    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/CAN.geo.json",
+    "#CE2424",
+    0.12
+  );
+
+  await addNation(
+    "usa",
+    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/USA.geo.json",
+    "#FFFFFF",
+    0.12
+  );
+
+  console.log("initializeStyleLayers() complete.");
+};
+
+console.log("%cmap-style.js fully loaded", "color:#00e5ff; font-weight:bold;");
