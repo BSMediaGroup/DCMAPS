@@ -14,11 +14,11 @@ const FLAG_US = "https://cdn.jsdelivr.net/gh/hjnilsson/country-flags/svg/us.svg"
 /* ==========================================================================
    MARKER ICON SOURCES — EXACT from monolith v1
    ========================================================================== */
-const ICON_DEPARTURE = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/dcpin.svg";
-const ICON_MAJOR     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/MajorWP2.svg";
-const ICON_MINOR     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/waypoint.svg";
-const ICON_CANPIN    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/CANpin.svg";
-const ICON_FINAL     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/SVG/STARBARX.svg";
+const ICON_DEPARTURE = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/PNG/dcpin.png";
+const ICON_MAJOR     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/PNG/MajorWP2.png";
+const ICON_MINOR     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/PNG/waypoint.png";
+const ICON_CANPIN    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/PNG/CANpin.png";
+const ICON_FINAL     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/PNG/STARBARX.png";
 
 /* ==========================================================================
    WAYPOINT IMAGES — 1:1 with monolith
@@ -710,3 +710,4 @@ window.TRIP_ORDER  = TRIP_ORDER;
 window.DRIVE_ORDER = DRIVE_ORDER;
 
 console.log("%cmap-data.js fully loaded", "color:#00ff88;font-weight:bold;");
+
