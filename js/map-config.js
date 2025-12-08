@@ -1,5 +1,5 @@
 /* ============================================================
-   MAP CONFIG MODULE — v5 (FINAL, CLEAN, CONSISTENT TIMEZONE)
+   MAP CONFIG MODULE — v6 (FINAL, CLEAN, CONSISTENT TIMEZONE + SUN-SAFE TIME FORMAT)
    ============================================================ */
 
 console.log("map-config.js loaded");
@@ -74,59 +74,41 @@ window.getCurrencyInfo = function (code) {
 };
 
 /* ============================================================
-   TIMEZONE HELPERS — SINGLE SOURCE = Intl
+   TIMEZONE HELPERS — SUN ENGINE SAFE FORMAT
    ============================================================ */
 /*
-   The key rule now:
+   CRITICAL CHANGE:
+   updateSunForWaypoint() requires EXACT format:
+       "1:07 AM"
+       "11:53 PM"
 
-     - We do NOT try to build offsets manually
-     - We do NOT parse locale strings back into Dates
-     - We let Intl do *all* the heavy lifting
-
-   That way:
-     - The "local time" display and
-     - The "UTC±hh:mm" label
-
-   are both derived from the same engine, so they cannot diverge.
+   Therefore:
+     - We NO LONGER include weekday/date inside the string.
+     - We output ONLY the time.
 */
 
-/** Local time string: "Monday, 12/08/2025 - 1:07am" */
+/** Local time string (SUN-SAFE): "1:07 AM" */
 window.formatLocalTime = function (wp) {
   const tz     = wp.meta?.timezone;
   const locale = wp.meta?.locale || "en-US";
-  if (!tz) return "Time unavailable";
+  if (!tz) return "12:00 AM";    // failsafe for sunlight engine
 
   try {
     const now = new Date();
 
-    // We use formatToParts so we can build your exact layout.
     const fmt = new Intl.DateTimeFormat(locale, {
       timeZone: tz,
-      weekday: "long",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
       hour: "numeric",
       minute: "2-digit",
       hour12: true
     });
 
-    const parts = fmt.formatToParts(now);
+    // Example: "1:07 AM"
+    return fmt.format(now);
 
-    const weekday   = parts.find(p => p.type === "weekday")?.value || "";
-    const month     = parts.find(p => p.type === "month")?.value || "";
-    const day       = parts.find(p => p.type === "day")?.value || "";
-    const year      = parts.find(p => p.type === "year")?.value || "";
-    const hour      = parts.find(p => p.type === "hour")?.value || "";
-    const minute    = parts.find(p => p.type === "minute")?.value || "";
-    const dayPeriod = (parts.find(p => p.type === "dayPeriod")?.value || "").toLowerCase();
-
-    // Force MM/DD/YYYY & "am"/"pm" style regardless of locale quirks
-    const dateStr = `${month}/${day}/${year}`;
-    return `${weekday}, ${dateStr} - ${hour}:${minute}${dayPeriod}`;
   } catch (err) {
     console.error("formatLocalTime failed:", err);
-    return "Time unavailable";
+    return "12:00 AM";
   }
 };
 
@@ -146,10 +128,9 @@ window.formatTimeZoneWithOffset = function (wp) {
       timeZoneName: "shortOffset"
     });
 
-    const parts = fmt.formatToParts(now);
-    let offset  = parts.find(p => p.type === "timeZoneName")?.value || "";
+    const parts  = fmt.formatToParts(now);
+    let offset   = parts.find(p => p.type === "timeZoneName")?.value || "";
 
-    // Normalise GMT→UTC just for aesthetics
     if (offset.startsWith("GMT")) offset = "UTC" + offset.slice(3);
 
     return `${tz} (${offset})`;
