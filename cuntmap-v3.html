@@ -15,6 +15,82 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="css/map.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <!-- SEARCH UI INLINE CSS (Option-C Component) -->
+  <style>
+    /* Search Button */
+    #globalSearchBtn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 4000;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid #999;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+    #globalSearchBtn:hover {
+      background: rgba(255,255,255,0.12);
+    }
+
+    /* Search Panel */
+    #globalSearchPanel {
+      position: absolute;
+      top: 52px;
+      right: 14px;
+      width: 300px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid #777;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 4000;
+      display: none;
+      backdrop-filter: blur(6px);
+    }
+
+    #globalSearchInput {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      background: #111;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    #globalSearchResults {
+      margin-top: 10px;
+      max-height: 240px;
+      overflow-y: auto;
+      border-top: 1px solid #666;
+      padding-top: 8px;
+    }
+
+    .search-result-item {
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      background: rgba(255,255,255,0.05);
+    }
+    .search-result-item:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    .search-result-title {
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .search-result-address {
+      font-size: 12px;
+      color: #ccc;
+    }
+  </style>
 </head>
 
 <body>
@@ -23,6 +99,19 @@
      MAP CONTAINER
 ============================================================ -->
 <div id="map"></div>
+
+<!-- ============================================================
+     SEARCH BUTTON (Option-C)
+============================================================ -->
+<button id="globalSearchBtn">Search</button>
+
+<!-- ============================================================
+     SEARCH PANEL (Option-C)
+============================================================ -->
+<div id="globalSearchPanel">
+  <input id="globalSearchInput" type="text" placeholder="Search places…">
+  <div id="globalSearchResults"></div>
+</div>
 
 <!-- ============================================================
      OVERLAY / LEGEND PANEL
@@ -61,10 +150,10 @@
     <div id="legendTotalDistance">Total Distance: calculating…</div>
   </div>
 
-  <!-- Start/Reset Journey BUTTON -->
+  <!-- Start/Reset Journey -->
   <button id="journeyToggle" class="trip-journey-btn">Start Journey</button>
 
-  <!-- Reset STATIC MODE ONLY -->
+  <!-- Reset button -->
   <button id="resetStaticMap" style="display:none;">Reset Map</button>
 
   <!-- Legend Toggle -->
@@ -171,16 +260,13 @@
 </div>
 
 <!-- ============================================================
-     SCRIPT MODULE LOADING — CORRECTED FINAL ORDER
+     SCRIPT MODULE LOADING — CORRECT ORDER
 ============================================================ -->
 <script src="js/map-config.js"></script>
 <script src="js/map-data.js"></script>
 <script src="js/map-style.js"></script>
 <script src="js/map-logic.js"></script>
-
-<!-- MUST LOAD BEFORE UI -->
 <script src="js/map-search.js"></script>
-
 <script src="js/map-ui.js"></script>
 <script src="js/map-core.js"></script>
 
