@@ -1,35 +1,29 @@
 /* ==========================================================================
-   MAP SEARCH MODULE — Mapbox POI Category Search (Final Stable Edition)
+   MAP SEARCH MODULE — FINAL INTEGRATED EDITION (Searchbox Text + POI)
    ==========================================================================
-   • Uses the dedicated RESTRICTED Search API token (NOT the base map token)
-   • Called automatically when the Details Sidebar opens
-   • Fully safe under Pattern-C and K-2 runtime constraints
-   • Normalizes all API results into a strict, UI-safe structure
-   • Absolutely no single-line edits — complete file output
+   • GLOBAL SEARCH (Option-C UI)
+   • Sidebar auto-POI categories (tourism, toilet, hotels)
+   • Uses the RESTRICTED Searchbox token (NOT the base map token)
+   • Fully normalized consistent result structure
+   • Safe under Pattern-C + K-2 constraints
    ========================================================================== */
 
 console.log("%cmap-search.js loaded", "color:#8cfffb;font-weight:bold;");
 
 /* --------------------------------------------------------------------------
-   CONFIG — RESTRICTED PUBLIC SEARCH TOKEN (NOT USED BY MAPBOX-GL)
+   CONFIG — RESTRICTED SEARCHBOX TOKEN
    -------------------------------------------------------------------------- */
 const MAPBOX_SEARCH_TOKEN =
   "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaXd1Ym9kNjJrZzkzaW9iZTVhZXZremcifQ.ZOdxBxJsibcD1MPVkn7z1g";
 
 /* ==========================================================================
-   INTERNAL NORMALIZER
-   Ensures all returned POIs have:
-      - id
-      - name (string)
-      - address (string)
-      - distance (meters)
-      - coords: [lon, lat]  OR null
+   INTERNAL NORMALIZER — used for BOTH Global Search + Sidebar POIs
    ========================================================================== */
 
 function normalizePOI(feature) {
   if (!feature || typeof feature !== "object") {
     return {
-      id: "unknown",
+      id: "no-id",
       name: "Unnamed",
       address: "",
       distance: null,
@@ -37,7 +31,11 @@ function normalizePOI(feature) {
     };
   }
 
-  const id = feature.id || "no-id";
+  const id =
+    feature.id ||
+    feature.mapbox_id ||
+    feature.properties?.id ||
+    "no-id";
 
   const name =
     feature.name ||
@@ -51,12 +49,11 @@ function normalizePOI(feature) {
     "";
 
   const distance =
-    typeof feature.distance === "number"
-      ? feature.distance
-      : null;
+    typeof feature.distance === "number" ? feature.distance : null;
 
-  // Searchbox stores coordinates in `feature.coordinates` NOT geometry.coordinates
   let coords = null;
+
+  // Searchbox always stores coordinates in feature.coordinates
   if (Array.isArray(feature.coordinates) && feature.coordinates.length === 2) {
     coords = feature.coordinates;
   } else if (Array.isArray(feature.geometry?.coordinates)) {
@@ -73,11 +70,7 @@ function normalizePOI(feature) {
 }
 
 /* ==========================================================================
-   API Helper: Fetch POIs for a category near a lat/lon
-   Categories:
-      • "tourism"
-      • "public_restroom"
-      • "lodging"
+   POI CATEGORY FETCHER — Sidebar Only
    ========================================================================== */
 
 async function fetchPOIs(lat, lon, category, limit = 10) {
@@ -93,7 +86,6 @@ async function fetchPOIs(lat, lon, category, limit = 10) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-
     if (!data || !Array.isArray(data.features)) return [];
 
     return data.features.map(normalizePOI);
@@ -105,7 +97,7 @@ async function fetchPOIs(lat, lon, category, limit = 10) {
 }
 
 /* ==========================================================================
-   Renderer: Populate a POI list container
+   SIDEBAR RENDERER — Category POIs
    ========================================================================== */
 
 function renderPOIList(container, list) {
@@ -135,7 +127,7 @@ function renderPOIList(container, list) {
 }
 
 /* ==========================================================================
-   PUBLIC INTERFACE — CALLED BY map-ui.js WHEN SIDEBAR OPENS
+   PUBLIC — Auto-POI Loader for Sidebar
    ========================================================================== */
 
 window.loadPOIsForWaypoint = async function (
@@ -153,17 +145,144 @@ window.loadPOIsForWaypoint = async function (
   if (outRestrooms) outRestrooms.innerHTML = `<div class="poi-empty">Loading…</div>`;
   if (outHotels) outHotels.innerHTML = `<div class="poi-empty">Loading…</div>`;
 
-  // Fetch in parallel
   const [tourism, restrooms, hotels] = await Promise.all([
     fetchPOIs(lat, lon, "tourism"),
     fetchPOIs(lat, lon, "public_restroom"),
     fetchPOIs(lat, lon, "lodging")
   ]);
 
-  // Render
   renderPOIList(outTourism, tourism);
   renderPOIList(outRestrooms, restrooms);
   renderPOIList(outHotels, hotels);
 };
+
+/* ==========================================================================
+   GLOBAL TEXT SEARCH (Option-C UI)
+   Searchbox API: /v1/text/{query}
+   ========================================================================== */
+
+/* DOM elements must already exist (Option-C UI installed in HTML) */
+const searchInput = document.getElementById("mapSearchInput");
+const searchResults = document.getElementById("mapSearchResults");
+
+let searchAbort = null;
+let searchMarkers = [];
+
+/* ----- UTIL: clear all search markers ----- */
+function clearSearchMarkers() {
+  searchMarkers.forEach(m => m.remove());
+  searchMarkers = [];
+}
+
+/* ----- UTIL: render global results list ----- */
+function renderSearchResults(list) {
+  if (!searchResults) return;
+
+  if (!list.length) {
+    searchResults.innerHTML = `<div class="search-empty">No results found</div>`;
+    return;
+  }
+
+  searchResults.innerHTML = list
+    .map(
+      r => `
+      <div class="search-item" data-id="${r.id}">
+        <div class="search-item-title">${escapeHTML(r.name)}</div>
+        <div class="search-item-address">${escapeHTML(r.address)}</div>
+      </div>
+    `
+    )
+    .join("");
+}
+
+/* ----- EVENT: Clicking search result ----- */
+if (searchResults) {
+  searchResults.addEventListener("click", e => {
+    const item = e.target.closest(".search-item");
+    if (!item) return;
+
+    const id = item.dataset.id;
+    const r = latestSearchResults.find(x => x.id === id);
+    if (!r || !r.coords) return;
+
+    const [lon, lat] = r.coords;
+
+    clearSearchMarkers();
+
+    const marker = new mapboxgl.Marker({ color: "#00c8ff" })
+      .setLngLat([lon, lat])
+      .addTo(__MAP);
+
+    searchMarkers.push(marker);
+
+    __MAP.easeTo({
+      center: [lon, lat],
+      zoom: 12.5,
+      pitch: 55,
+      duration: 1200
+    });
+
+    // Update sun for this location
+    const fakeWP = { coords: [lon, lat], meta: { timezone: "UTC" } };
+    if (typeof updateSunForWaypoint === "function") {
+      updateSunForWaypoint(fakeWP);
+    }
+  });
+}
+
+/* ===== GLOBAL SEARCH REQUEST ===== */
+
+let latestSearchResults = [];
+
+async function performGlobalSearch(query) {
+  if (!query || query.length < 2) {
+    searchResults.innerHTML = "";
+    clearSearchMarkers();
+    return;
+  }
+
+  // Cancel old request
+  if (searchAbort) searchAbort.abort();
+  searchAbort = new AbortController();
+
+  const url =
+    `https://api.mapbox.com/search/searchbox/v1/text/${encodeURIComponent(query)}` +
+    `?language=en&limit=8&access_token=${MAPBOX_SEARCH_TOKEN}`;
+
+  try {
+    const res = await fetch(url, { signal: searchAbort.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (!data || !Array.isArray(data.features)) {
+      renderSearchResults([]);
+      return;
+    }
+
+    latestSearchResults = data.features.map(normalizePOI);
+    renderSearchResults(latestSearchResults);
+
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      console.error("Global search failed:", err);
+    }
+  }
+}
+
+/* ----- THROTTLE INPUT ----- */
+let searchTimer = null;
+
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.trim();
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => performGlobalSearch(q), 250);
+  });
+}
+
+/* ==========================================================================
+   FINAL READY
+   ========================================================================== */
 
 console.log("%cmap-search.js fully ready", "color:#74ffb8;font-weight:bold;");
