@@ -98,7 +98,6 @@
 
     <div class="details-sidebar-header">
       <img id="detailsSidebarImage" class="details-sidebar-image" src="" alt="">
-      <!-- FIX 1: Correct ID used by map-ui.js -->
       <button id="detailsClose" class="details-sidebar-close">×</button>
     </div>
 
@@ -147,13 +146,6 @@
 
       <div class="details-sidebar-divider"></div>
 
-      <!-- FIX 2: POI LINK BAR NOW REMOVED / HIDDEN -->
-      <div class="details-sidebar-links" style="display:none;">
-        <a id="detailsSidebarTourist" class="details-sidebar-link" target="_blank">Tourist Places</a>
-        <a id="detailsSidebarToilets" class="details-sidebar-link" target="_blank">Toilets</a>
-        <a id="detailsSidebarHotels" class="details-sidebar-link" target="_blank">Hotels</a>
-      </div>
-
       <section class="details-section">
         <div class="details-section-title">Nearby Tourist Spots</div>
         <div id="detailsSidebarTouristList" class="details-poi-list"></div>
@@ -179,12 +171,16 @@
 </div>
 
 <!-- ============================================================
-     SCRIPT MODULE LOADING — FIXED ORDER (MANDATORY)
+     SCRIPT MODULE LOADING — CORRECTED FINAL ORDER
 ============================================================ -->
 <script src="js/map-config.js"></script>
 <script src="js/map-data.js"></script>
 <script src="js/map-style.js"></script>
 <script src="js/map-logic.js"></script>
+
+<!-- MUST LOAD BEFORE UI -->
+<script src="js/map-search.js"></script>
+
 <script src="js/map-ui.js"></script>
 <script src="js/map-core.js"></script>
 
