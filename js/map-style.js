@@ -1,27 +1,29 @@
 /* ============================================================
-   MAP STYLE BOOTSTRAP — v7 (STANDARD STYLE EDITION)
-   Compatible with 3D Buildings, Terrain, Sky, Sunlight, Fog
-   + Search Button Hook (Option-C)
+   MAP STYLE BOOTSTRAP — v8 (STANDARD SAFE EDITION)
+   • Fully compatible with Mapbox Standard style
+   • Globe, terrain, sky, fog, sunlight
+   • 3D buildings restored
+   • ALL 3D vegetation/models disabled (critical!)
+   • Composite source protection
+   • No SVG texture loading attempts
    ============================================================ */
 
 console.log("map-style.js loaded");
 
 /* ------------------------------------------------------------
-   BASE MAPBOX STYLE — UPDATED TO STANDARD
+   BASE MAPBOX STYLE — STANDARD
 ------------------------------------------------------------ */
-
 const MAP_STYLE_URL = "mapbox://styles/mapbox/standard";
 
 /* IMPORTANT:
-   This token is ONLY for the base map. DO NOT use the Search token.
-*/
+   This token is ONLY for the base map.
+------------------------------------------------------------ */
 mapboxgl.accessToken =
   "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaW41d2xwNzJhYW0zZnB4bGR0eGNlZjYifQ.qTsXirOA9VxIE8TXHmihyw";
 
 /* ------------------------------------------------------------
    CREATE MAP INSTANCE
 ------------------------------------------------------------ */
-
 const map = new mapboxgl.Map({
   container: "map",
   style: MAP_STYLE_URL,
@@ -29,7 +31,8 @@ const map = new mapboxgl.Map({
   zoom: DEFAULT_ZOOM,
   pitch: DEFAULT_PITCH,
   projection: "globe",
-  renderWorldCopies: false
+  renderWorldCopies: false,
+  antialias: true                 // required for correct sky + terrain blending
 });
 
 window.__MAP = map;
@@ -43,12 +46,12 @@ map.addControl(new mapboxgl.NavigationControl({ showCompass: false }));
 
 
 /* ------------------------------------------------------------
-   USER INTERRUPTION (STOP SPIN, SHOW RESET BTN)
+   USER INTERRUPTION (STOP SPIN)
 ------------------------------------------------------------ */
-
 function interruptSpin() {
   window.spinning = false;
   window.userInterrupted = true;
+
   const resetBtn = document.getElementById("resetStaticMap");
   if (resetBtn && !window.journeyMode) resetBtn.style.display = "block";
 }
@@ -59,9 +62,8 @@ function interruptSpin() {
 
 
 /* ============================================================
-   FOG + SKY (STANDARD-FRIENDLY CONFIGURATION)
+   SKY + FOG SETTINGS
 ============================================================ */
-
 const FOG_COLOR = "rgba(5, 10, 20, 0.70)";
 const FOG_HIGH_COLOR = "rgba(60,150,255,0.40)";
 const FOG_HORIZON_BLEND = 0.45;
@@ -69,10 +71,9 @@ const FOG_SPACE_COLOR = "#02040A";
 const FOG_STAR_INTENSITY = 0.65;
 
 
-/* ------------------------------------------------------------
-   SAFE HELPERS
------------------------------------------------------------- */
-
+/* ============================================================
+   SAFETY HELPERS
+============================================================ */
 function safeEnsureSource(id) {
   if (!map.getSource(id)) {
     map.addSource(id, {
@@ -99,15 +100,47 @@ function safeEnsureLineLayer(id, source, paint, before = undefined) {
 
 
 /* ============================================================
-   TERRAIN + SKY + BUILDINGS + ROUTE LAYER SHELLS
-   (STANDARD-COMPATIBLE VERSION)
+   DISABLE 3D VEGETATION / MODELS COMPLETELY
+   (ABSOLUTELY REQUIRED — your logs show 700+ failures)
 ============================================================ */
+map.on("style.load", () => {
+  const style = map.getStyle();
 
+  style.layers.forEach(layer => {
+    if (
+      layer.type === "model" ||
+      layer.id.includes("tree") ||
+      layer.id.includes("vegetation") ||
+      layer.id.includes("lod") ||
+      layer.id.includes("turbine")
+    ) {
+      try {
+        map.removeLayer(layer.id);
+      } catch (e) {}
+    }
+  });
+});
+
+
+/* ============================================================
+   PROTECT "composite" SOURCE (Standard styles sometimes break)
+============================================================ */
+map.on("styledata", () => {
+  if (!map.getSource("composite")) {
+    console.warn("⚠ composite missing — reloading Standard style");
+    map.setStyle(MAP_STYLE_URL);
+  }
+});
+
+
+/* ============================================================
+   TERRAIN + SKY + BUILDINGS + ROUTE SHELLS
+============================================================ */
 map.on("style.load", () => {
   console.log("map-style.js: style.load fired");
 
   /* ----------------------------------------------------------
-     ATMOSPHERE / FOG
+     FOG / ATMOSPHERE
   ---------------------------------------------------------- */
   map.setFog({
     color: FOG_COLOR,
@@ -118,8 +151,7 @@ map.on("style.load", () => {
   });
 
   /* ----------------------------------------------------------
-     TERRAIN (REQUIRED FOR MAPBOX STANDARD)
-     Must use mapbox.mapbox-terrain-v2
+     TERRAIN — Standard requires mapbox-terrain-v2
   ---------------------------------------------------------- */
   if (!map.getSource("terrain-dem")) {
     map.addSource("terrain-dem", {
@@ -128,12 +160,10 @@ map.on("style.load", () => {
       tileSize: 512
     });
   }
-
   map.setTerrain({ source: "terrain-dem", exaggeration: 1.25 });
 
-
   /* ----------------------------------------------------------
-     SKY LAYER — Required for sunlight effects
+     SKY — Required for sun simulation
   ---------------------------------------------------------- */
   if (!map.getLayer("sky")) {
     map.addLayer({
@@ -147,16 +177,13 @@ map.on("style.load", () => {
     });
   }
 
-
   /* ----------------------------------------------------------
-     3D BUILDINGS (STANDARD HAS DIFFERENT SOURCE/LAYER NAMES)
+     3D BUILDINGS (Standard)
   ---------------------------------------------------------- */
-
   const buildingLayer = map
     .getStyle()
-    .layers.find(l => l.id.includes("building") && l.type === "fill-extrusion");
+    .layers.find(l => l.type === "fill-extrusion" && l.id.includes("building"));
 
-  // If no existing building extrusion layer is present, add one manually
   if (!buildingLayer) {
     const firstSymbol = map.getStyle().layers.find(l => l.type === "symbol")?.id;
 
@@ -179,11 +206,9 @@ map.on("style.load", () => {
     );
   }
 
-
   /* ----------------------------------------------------------
-     ROUTE PLACEHOLDERS — Required BEFORE map-core starts
+     ROUTE SOURCE SHELLS
   ---------------------------------------------------------- */
-
   safeEnsureSource("flight-route");
   safeEnsureSource("drive-route");
 
@@ -199,44 +224,46 @@ map.on("style.load", () => {
     "line-width": 4,
     "line-opacity": 0.95
   });
-
 
   console.log("map-style.js: terrain + sky + buildings + route shells ready");
 });
 
 
 /* ============================================================
-   STYLE RELOAD HANDLER (SURVIVES STANDARD STYLE SWAPS)
+   SUN UPDATE (Unmodified — You already have the final version)
 ============================================================ */
+window.updateSunForWaypoint = function (wp) {
+  if (!wp) return;
 
-map.on("styledata", () => {
-  if (!map._restoring) {
-    map._restoring = true;
-    setTimeout(() => (map._restoring = false), 120);
+  const tStr = formatLocalTime(wp);
+  if (!tStr) return;
+
+  let raw = tStr.split("-")[1]?.trim();
+  if (!raw) return;
+
+  const ampm = raw.slice(-2).toLowerCase();
+  const time = raw.slice(0, -2);
+
+  let [hour, minute] = time.split(":").map(Number);
+  if (ampm === "pm" && hour < 12) hour += 12;
+  if (ampm === "am" && hour === 12) hour = 0;
+
+  const minutes = hour * 60 + minute;
+  const progress = minutes / 1440;
+
+  const azimuth = progress * 360;
+  let altitude = Math.sin(progress * Math.PI * 2) * 70;
+  altitude = Math.max(-10, Math.min(altitude, 85));
+
+  if (map.getLayer("sky")) {
+    map.setPaintProperty("sky", "sky-atmosphere-sun", [azimuth, altitude]);
   }
-
-  safeEnsureSource("flight-route");
-  safeEnsureSource("drive-route");
-
-  safeEnsureLineLayer("flight-route", "flight-route", {
-    "line-color": "#478ED3",
-    "line-width": 3,
-    "line-dasharray": [3, 2],
-    "line-opacity": 0.9
-  });
-
-  safeEnsureLineLayer("drive-route", "drive-route", {
-    "line-color": "#FF9C57",
-    "line-width": 4,
-    "line-opacity": 0.95
-  });
-});
+};
 
 
 /* ============================================================
-   NATION SHADING — Unmodified
+   NATION SHADING (Unmodified)
 ============================================================ */
-
 async function addNation(id, url, color, opacity) {
   if (map.getSource(id)) return;
 
@@ -263,68 +290,12 @@ async function addNation(id, url, color, opacity) {
   }
 }
 
-
-/* ============================================================
-   SUN UPDATE (FULLY COMPATIBLE WITH STANDARD SKY)
-============================================================ */
-
-window.updateSunForWaypoint = function (wp) {
-  if (!wp) return;
-
-  const tStr = formatLocalTime(wp);
-  if (!tStr) return;
-
-  let raw = tStr.split("-")[1]?.trim();
-  if (!raw) return;
-
-  const ampm = raw.slice(-2).toLowerCase();
-  const time = raw.slice(0, -2);
-
-  let [hour, minute] = time.split(":").map(Number);
-  if (ampm === "pm" && hour < 12) hour += 12;
-  if (ampm === "am" && hour === 12) hour = 0;
-
-  const minutesOfDay = hour * 60 + minute;
-  const dayProgress = minutesOfDay / 1440;
-
-  const azimuth = dayProgress * 360;
-  let altitude = Math.sin(dayProgress * Math.PI * 2) * 70;
-
-  altitude = Math.max(-10, Math.min(altitude, 85));
-
-  if (map.getLayer("sky")) {
-    map.setPaintProperty("sky", "sky-atmosphere-sun", [azimuth, altitude]);
-  }
-};
-
-
-/* ============================================================
-   INITIALIZER (NATION SHADING)
-============================================================ */
-
 window.initializeStyleLayers = async function () {
   console.log("initializeStyleLayers() running...");
 
-  await addNation(
-    "aus",
-    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/AUS.geo.json",
-    "#1561CF",
-    0.12
-  );
-
-  await addNation(
-    "can",
-    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/CAN.geo.json",
-    "#CE2424",
-    0.12
-  );
-
-  await addNation(
-    "usa",
-    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/USA.geo.json",
-    "#FFFFFF",
-    0.12
-  );
+  await addNation("aus", "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/AUS.geo.json", "#1561CF", 0.12);
+  await addNation("can", "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/CAN.geo.json", "#CE2424", 0.12);
+  await addNation("usa", "https://raw.githubusercontent.com/johan/world.geo.json/master/countries/USA.geo.json", "#FFFFFF", 0.12);
 
   console.log("initializeStyleLayers() complete.");
 };
