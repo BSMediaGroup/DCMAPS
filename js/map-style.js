@@ -1,6 +1,6 @@
 /* ============================================================
-   MAP STYLE BOOTSTRAP — v5 (FINAL SYSTEM-LOCKED EDITION)
-   Pattern-C Atmosphere • K-2 Sky Safe Mode • Terrain • Buildings
+   MAP STYLE BOOTSTRAP — v6 (FINAL CRASH-PROTECTED EDITION)
+   Pattern-C Atmosphere • K-2 Sun Model • Terrain • Buildings
    ============================================================ */
 
 console.log("map-style.js loaded");
@@ -12,8 +12,7 @@ console.log("map-style.js loaded");
 const MAP_STYLE_URL = "mapbox://styles/mapbox/dark-v11";
 
 /* IMPORTANT:
-   This token is ONLY for the base map. It must NOT use the
-   restricted Search token. Search module handles its own key.
+   This token is ONLY for the base map. DO NOT use the Search token.
 */
 mapboxgl.accessToken =
   "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaW41d2xwNzJhYW0zZnB4bGR0eGNlZjYifQ.qTsXirOA9VxIE8TXHmihyw";
@@ -56,7 +55,7 @@ function interruptSpin() {
 );
 
 /* ------------------------------------------------------------
-   FOG + SPACEFIELD (IDENTICAL TO MONOLITH)
+   FOG + SPACEFIELD — Pattern-C
 ------------------------------------------------------------ */
 
 const FOG_COLOR = "rgba(5, 10, 20, 0.9)";
@@ -66,8 +65,7 @@ const FOG_SPACE_COLOR = "#02040A";
 const FOG_STAR_INTENSITY = 0.65;
 
 /* ------------------------------------------------------------
-   SAFE STYLE LOAD HANDLER
-   Required because Mapbox v3 resets layers on style reload.
+   SAFE HELPERS (Mapbox v3 style recreation)
 ------------------------------------------------------------ */
 
 function safeEnsureSource(id) {
@@ -95,16 +93,13 @@ function safeEnsureLineLayer(id, source, paint, before = undefined) {
 }
 
 /* ============================================================
-   TERRAIN + SKY + 3D BUILDINGS + ROUTE SHELLS
+   TERRAIN + SKY + BUILDINGS + ROUTE SHELLS
 ============================================================ */
 
 map.on("style.load", () => {
   console.log("map-style.js: style.load fired");
 
-  /* ---------------------------------------------------------
-     Atmosphere (Pattern-C)
-     K-2 safety: sky intensity capped, horizon blending safe value
-  --------------------------------------------------------- */
+  /* Atmosphere */
   map.setFog({
     color: FOG_COLOR,
     "high-color": FOG_HIGH_COLOR,
@@ -113,9 +108,7 @@ map.on("style.load", () => {
     "star-intensity": FOG_STAR_INTENSITY
   });
 
-  /* ---------------------------------------------------------
-     TERRAIN SOURCE
-  --------------------------------------------------------- */
+  /* TERRAIN */
   if (!map.getSource("mapbox-dem")) {
     map.addSource("mapbox-dem", {
       type: "raster-dem",
@@ -126,25 +119,20 @@ map.on("style.load", () => {
     map.setTerrain({ source: "mapbox-dem", exaggeration: 1.2 });
   }
 
-  /* ---------------------------------------------------------
-     SKY LAYER (Pattern-C + K-2 clamped angles)
-  --------------------------------------------------------- */
+  /* SKY (Pattern-C + K-2 safe default) */
   if (!map.getLayer("sky")) {
     map.addLayer({
       id: "sky",
       type: "sky",
       paint: {
         "sky-type": "atmosphere",
-        "sky-atmosphere-sun": [0, 85],         // safe default (K-2 clamp)
-        "sky-atmosphere-sun-intensity": 4.2    // safe reduced bloom
+        "sky-atmosphere-sun": [0, 80],   // safe initial sun angles
+        "sky-atmosphere-sun-intensity": 4.2
       }
     });
   }
 
-  /* ---------------------------------------------------------
-     3D BUILDINGS
-     Must insert BEFORE the label layer for proper depth sorting
-  --------------------------------------------------------- */
+  /* BUILDINGS */
   const firstSymbol =
     map.getStyle().layers.find(l => l.type === "symbol")?.id || undefined;
 
@@ -168,9 +156,7 @@ map.on("style.load", () => {
     );
   }
 
-  /* ---------------------------------------------------------
-     STATIC ROUTE PLACEHOLDERS
-  --------------------------------------------------------- */
+  /* ROUTE PLACEHOLDERS */
   safeEnsureSource("flight-route");
   safeEnsureSource("drive-route");
 
@@ -191,7 +177,7 @@ map.on("style.load", () => {
 });
 
 /* ============================================================
-   STYLE RELOAD HANDLER (Mapbox v3 resets EVERYTHING)
+   STYLE RELOAD HANDLER
 ============================================================ */
 
 map.on("styledata", () => {
@@ -218,7 +204,7 @@ map.on("styledata", () => {
 });
 
 /* ============================================================
-   NATION SHADING (Monolith behaviour)
+   NATION SHADING
 ============================================================ */
 
 async function addNation(id, url, color, opacity) {
@@ -254,27 +240,39 @@ async function addNation(id, url, color, opacity) {
 }
 
 /* ============================================================
-   SUN UPDATE (Pattern-C + K-2 safe clamps)
+   FIXED — SUN UPDATE (Pattern-C + K-2 SAFE PARSER)
 ============================================================ */
 
 window.updateSunForWaypoint = function (wp) {
   if (!wp) return;
 
+  // formatLocalTime returns: "Monday, 12/08/2025 - 1:07am"
   const tStr = formatLocalTime(wp);
-  let [time, ampm] = tStr.split(" ");
+  if (!tStr) return;
+
+  // Extract the part AFTER the hyphen
+  let raw = tStr.split("-")[1]?.trim();
+  if (!raw) return;
+
+  // raw = "1:07am" or "11:20pm"
+  const ampm = raw.slice(-2).toLowerCase();
+  const time = raw.slice(0, -2); // strip am/pm
+
   let [hour, minute] = time.split(":").map(Number);
+  if (isNaN(hour) || isNaN(minute)) return;
 
-  if (ampm === "PM" && hour < 12) hour += 12;
-  if (ampm === "AM" && hour === 12) hour = 0;
+  // Convert to 24-hour format
+  if (ampm === "pm" && hour < 12) hour += 12;
+  if (ampm === "am" && hour === 12) hour = 0;
 
-  const minutes = hour * 60 + minute;
-  const dayProgress = minutes / 1440;
+  const minutesOfDay = hour * 60 + minute;
+  const dayProgress = minutesOfDay / 1440;
 
   const azimuth = dayProgress * 360;
-  let altitude = Math.sin(dayProgress * Math.PI * 2) * 75;
+  let altitude = Math.sin(dayProgress * Math.PI * 2) * 70;
 
-  // K-2 SKY SAFETY: clamp altitude
-  altitude = Math.max(-12, Math.min(altitude, 85));
+  // K-2 Safety Clamps
+  altitude = Math.max(-10, Math.min(altitude, 85));
 
   if (map.getLayer("sky")) {
     map.setPaintProperty("sky", "sky-atmosphere-sun", [azimuth, altitude]);
@@ -282,7 +280,7 @@ window.updateSunForWaypoint = function (wp) {
 };
 
 /* ============================================================
-   INITIALIZER (Called from map-core.js)
+   INITIALIZER
 ============================================================ */
 
 window.initializeStyleLayers = async function () {
