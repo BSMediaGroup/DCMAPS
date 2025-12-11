@@ -17,7 +17,12 @@ const MAP_STYLE_URL = "mapbox://styles/danielclancy/cmj1qph0p009b01sl62pcf0ib";
 */
 mapboxgl.accessToken =
   "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaW41bG80YjF1OGEzY3BsOGc0c3hmcjEifQ.mzOhbS7w2aWqxNhSAZkg9g";
-mapboxgl.setTelemetryEnabled(false);
+// Mapbox GL JS v3 removed setTelemetryEnabled; guard for older/newer builds
+if (typeof mapboxgl.setTelemetryEnabled === "function") {
+  mapboxgl.setTelemetryEnabled(false);
+} else {
+  console.warn("map-style.js: telemetry toggle unavailable (Mapbox GL v3)");
+}
 
 /* ------------------------------------------------------------
    CREATE MAP INSTANCE
