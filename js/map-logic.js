@@ -98,11 +98,22 @@ window.initDistances = function () {
    GREAT CIRCLE BUILDER — ZIGZAG FIX (1:1 FROM MONOLITH)
 ======================================================================= */
 
-function normalizeCoord(lon, lat) {
-  // Preserve longitude continuity (no wrap) to avoid anti-meridian zigzags,
-  // but keep latitude within safe bounds for the globe projection.
+function normalizeCoord(lon, lat, prevLon = null) {
+  // Keep latitude in safe bounds for globe projection.
   const clampedLat = Math.max(-89.999999, Math.min(89.999999, lat));
-  return [lon, clampedLat];
+
+  // Wrap longitude to the [-180, 180] range but preserve segment continuity
+  // to avoid Mapbox drawing a zigzag when crossing the international dateline.
+  let wrappedLon = ((lon + 540) % 360) - 180;
+
+  if (prevLon != null) {
+    const delta = wrappedLon - prevLon;
+    if (Math.abs(delta) > 180) {
+      wrappedLon += delta > 0 ? -360 : 360;
+    }
+  }
+
+  return [wrappedLon, clampedLat];
 }
 
 window.buildGreatCircle = function (fromId, toId, steps = 220) {
@@ -132,10 +143,12 @@ window.buildGreatCircle = function (fromId, toId, steps = 220) {
   ));
 
   if (!Number.isFinite(Δ) || Δ === 0) {
-    return [normalizeCoord(lon1d, lat1), normalizeCoord(lon2d, lat2)];
+    return [normalizeCoord(lon1d, lat1), normalizeCoord(lon2d, lat2, lon1d)];
   }
 
   const out = [];
+  let prevLon = null;
+
   for (let i = 0; i <= steps; i++) {
     const f = i / steps;
     const A1 = Math.sin((1 - f) * Δ) / Math.sin(Δ);
@@ -148,7 +161,10 @@ window.buildGreatCircle = function (fromId, toId, steps = 220) {
     const φ = Math.atan2(z, Math.sqrt(x * x + y * y));
     const λ = Math.atan2(y, x);
 
-    out.push(normalizeCoord(λ * 180 / Math.PI, φ * 180 / Math.PI));
+    const coord = normalizeCoord(λ * 180 / Math.PI, φ * 180 / Math.PI, prevLon);
+    prevLon = coord[0];
+
+    out.push(coord);
   }
 
   return out;
@@ -329,19 +345,11 @@ window.spinGlobe = function () {
   const targetCenter = DEFAULT_CENTER || [0, 0];
   const targetPitch  = DEFAULT_PITCH ?? 0;
 
-  // Keep the auto-spin aligned to the north–south axis with a level camera.
-  const center = map.getCenter();
-  const needsCenter = center.lng !== targetCenter[0] || center.lat !== targetCenter[1];
-  const needsPitch  = map.getPitch() !== targetPitch;
-
-  if (needsCenter || needsPitch) {
-    map.jumpTo({
-      center: targetCenter,
-      pitch: targetPitch,
-      bearing: map.getBearing(),
-      zoom: map.getZoom()
-    });
-  }
+  // Keep the auto-spin aligned to the north–south axis with a level camera
+  // and a stable equatorial anchor.
+  map.setCenter(targetCenter);
+  map.setPitch(targetPitch);
+  map.setBearing(0);
 
   map.setBearing(map.getBearing() + ORBIT_ROTATION_SPEED);
 

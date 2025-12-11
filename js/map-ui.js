@@ -658,6 +658,12 @@ window.openDetailsSidebar = function (id) {
   /* ---- AUTO-LOAD MAPBOX POIs ---- */
   loadPOIsForWaypoint(w, detailsPOI_Tourism, detailsPOI_Restrooms, detailsPOI_Hotels);
 
+  /* ---- PRIME SIDEBAR SEARCH CONTEXT ---- */
+  if (typeof window.setSidebarSearchContext === "function") {
+    const label = `${w.names.city}, ${w.names.country}`;
+    window.setSidebarSearchContext(w.coords, label);
+  }
+
   /* ---- NEW: UPDATE SUNLIGHT SAFE MODE (K2) ---- */
   if (MAP_READY && __MAP.getLayer("sky")) updateSunForWaypoint(w);
 

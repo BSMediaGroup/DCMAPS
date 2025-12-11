@@ -158,7 +158,7 @@ map.on("style.load", () => {
         source: "composite",
         "source-layer": "building",
         filter: ["==", "extrude", "true"],
-        minzoom: 14,
+        minzoom: 12.5,
         paint: {
           "fill-extrusion-color": "#AAAAAA",
           "fill-extrusion-height": ["get", "height"],
