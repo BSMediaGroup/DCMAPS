@@ -99,9 +99,10 @@ window.initDistances = function () {
 ======================================================================= */
 
 function normalizeCoord(lon, lat) {
-  lon = ((lon + 180) % 360 + 360) % 360 - 180;
-  lat = Math.max(-89.999999, Math.min(89.999999, lat));
-  return [lon, lat];
+  // Preserve longitude continuity (no wrap) to avoid anti-meridian zigzags,
+  // but keep latitude within safe bounds for the globe projection.
+  const clampedLat = Math.max(-89.999999, Math.min(89.999999, lat));
+  return [lon, clampedLat];
 }
 
 window.buildGreatCircle = function (fromId, toId, steps = 220) {
@@ -325,6 +326,23 @@ window.spinGlobe = function () {
   if (!spinning) return;
 
   const map = MAP();
+  const targetCenter = DEFAULT_CENTER || [0, 0];
+  const targetPitch  = DEFAULT_PITCH ?? 0;
+
+  // Keep the auto-spin aligned to the north–south axis with a level camera.
+  const center = map.getCenter();
+  const needsCenter = center.lng !== targetCenter[0] || center.lat !== targetCenter[1];
+  const needsPitch  = map.getPitch() !== targetPitch;
+
+  if (needsCenter || needsPitch) {
+    map.jumpTo({
+      center: targetCenter,
+      pitch: targetPitch,
+      bearing: map.getBearing(),
+      zoom: map.getZoom()
+    });
+  }
+
   map.setBearing(map.getBearing() + ORBIT_ROTATION_SPEED);
 
   requestAnimationFrame(window.spinGlobe);

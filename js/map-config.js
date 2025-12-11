@@ -8,9 +8,11 @@ console.log("map-config.js loaded");
    DEFAULT MAP VIEW SETTINGS (TRUE MONOLITH VALUES)
    ============================================================ */
 
-window.DEFAULT_CENTER = [-100, 40];
-window.DEFAULT_ZOOM   = 1.65;
-window.DEFAULT_PITCH  = 42.7;
+// Default view keeps the globe level and centered on the equator so auto-spin
+// uses a clean north–south axis and the sphere sits visually centered.
+window.DEFAULT_CENTER = [0, 0];
+window.DEFAULT_ZOOM   = 1.9;
+window.DEFAULT_PITCH  = 0;
 
 /* ============================================================
    GLOBAL STATE FLAGS
@@ -26,8 +28,9 @@ window.currentID       = null;
    ORBIT CAMERA CONSTANTS
    ============================================================ */
 
-window.ORBIT_ZOOM_TARGET    = 12.5;
-window.ORBIT_PITCH_TARGET   = 60;    // keep ≤ 60 for globe stability
+// Sharper waypoint focus: closer zoom and steeper tilt.
+window.ORBIT_ZOOM_TARGET    = 14.5;
+window.ORBIT_PITCH_TARGET   = 65;
 window.ORBIT_ROTATION_SPEED = 0.015;
 window.ORBIT_ENTRY_DURATION = 900;
 
@@ -35,9 +38,9 @@ window.ORBIT_ENTRY_DURATION = 900;
    JOURNEY CAMERA CONSTANTS
    ============================================================ */
 
-window.JOURNEY_PITCH_TARGET = 55;
+window.JOURNEY_PITCH_TARGET = 62;
 window.JOURNEY_ZOOM_DEFAULT = ORBIT_ZOOM_TARGET;
-window.JOURNEY_ZOOM_LA      = ORBIT_ZOOM_TARGET * 0.5;
+window.JOURNEY_ZOOM_LA      = ORBIT_ZOOM_TARGET - 1.25;
 
 /* ============================================================
    IMPORTANT NOTE ABOUT TRIP ORDER
