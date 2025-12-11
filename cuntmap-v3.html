@@ -16,65 +16,6 @@
   <link rel="stylesheet" href="css/map.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 
-  <!-- ============================================================
-       PERMANENT SEARCH BAR (Option A / Option C Style)
-       ============================================================ -->
-  <style>
-    /* Search Container */
-    #globalSearchContainer {
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      width: 320px;
-      z-index: 5000;
-      background: rgba(0,0,0,0.65);
-      backdrop-filter: blur(6px);
-      border: 1px solid #777;
-      border-radius: 8px;
-      padding: 10px;
-    }
-
-    /* Search Input */
-    #mapSearchInput {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #aaa;
-      background: #111;
-      color: #fff;
-      font-size: 14px;
-    }
-
-    /* Results */
-    #mapSearchResults {
-      margin-top: 10px;
-      max-height: 260px;
-      overflow-y: auto;
-      border-top: 1px solid #555;
-      padding-top: 8px;
-    }
-
-    .search-result-item {
-      padding: 8px;
-      border-radius: 4px;
-      background: rgba(255,255,255,0.05);
-      cursor: pointer;
-      margin-bottom: 6px;
-    }
-    .search-result-item:hover {
-      background: rgba(255,255,255,0.15);
-    }
-    .search-result-title {
-      font-size: 14px;
-      color: #fff;
-      font-weight: 600;
-    }
-    .search-result-address {
-      font-size: 12px;
-      color: #ccc;
-    }
-  </style>
-
 </head>
 
 <body>
@@ -85,14 +26,6 @@
 <div id="map"></div>
 
 <!-- ============================================================
-     PERMANENT SEARCH BAR (Option A)
-============================================================ -->
-<div id="globalSearchContainer">
-  <input id="mapSearchInput" type="text" placeholder="Search for places…">
-  <div id="mapSearchResults"></div>
-</div>
-
-<!-- ============================================================
      OVERLAY / LEGEND PANEL
 ============================================================ -->
 <div class="trip-overlay">
@@ -100,7 +33,7 @@
 
   <div id="legendContainer">
     <div class="trip-overlay-subtitle">
-      Sydney → L.A. → Toronto flights, then road trip via Boston, NYC & Hoboken to Toms River.
+      Sydney → L.A. → Toronto flights, then road trip via Boston, Providence, New Haven, NYC & Hoboken to Toms River.
     </div>
 
     <div class="trip-legend-row">
@@ -160,6 +93,19 @@
   </div>
   <div id="hudLabel" class="journey-hud-label"></div>
 </div>
+
+<!-- ============================================================
+     FLOATING SEARCH
+============================================================ -->
+<div id="floatingSearch" class="floating-search collapsed">
+  <button id="floatingSearchToggle" class="floating-search-toggle" aria-expanded="false">
+    🔍 Find POI
+  </button>
+  <div class="floating-search-panel">
+    <input id="mapSearchInput" type="text" placeholder="Search for places…" aria-label="Search places on map">
+  </div>
+</div>
+<div id="mapSearchResults" class="floating-search-results"></div>
 
 <!-- ============================================================
      DETAILS SIDEBAR + OVERLAY

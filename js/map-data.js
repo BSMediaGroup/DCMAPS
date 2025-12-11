@@ -29,15 +29,13 @@ const IMG_TORONTO    = "https://raw.githubusercontent.com/BSMediaGroup/Resources
 const IMG_HAMILTON   = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/hamilton.webp";
 const IMG_NIAGARA    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/niagara.webp";
 const IMG_BOSTON     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/dce5946f2d2d347ed5f2af26c8a5e7be80eab943/IMG/boston.webp";
-const IMG_BATAVIA    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/batavia.webp";
 const IMG_ROCHESTER  = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/rochester.webp";
 const IMG_GENEVA     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/geneva.webp";
 const IMG_SYRACUSE   = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/syracuse.webp";
 const IMG_UTICA      = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/utica.webp";
 const IMG_ALBANY     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/albany.webp";
-const IMG_KINGSTON   = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/kingston.webp";
-const IMG_NEWBURGH   = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/newburgh.webp";
-const IMG_WHITEPLNS  = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/whiteplains.webp";
+const IMG_PROVIDENCE = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/providence.jpg";
+const IMG_NEWHAVEN   = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/newhaven.jpg";
 const IMG_NYC        = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/newyork2.webp";
 const IMG_HOBOKEN    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/hoboken.webp";
 const IMG_NEWARK     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/newark.webp";
@@ -223,39 +221,6 @@ const WAYPOINTS = [
   },
 
   /* ————————————————— REMAINING WAYPOINTS ————————————————— */
-  {
-    id:"batavia",
-    role:"minor",
-    mode:"Car",
-    coords:[-78.193,42.9987],
-
-    location:"Batavia NY",
-    names:{
-      display:"Waypoint – Batavia",
-      basic:"Batavia, NY",
-      city:"Batavia",
-      state:"NY",
-      country:"United States"
-    },
-
-    description:"Small stop on I-90.",
-    icon: ICON_MINOR,
-    image: IMG_BATAVIA,
-
-    links:{
-      search: null,
-      toilets: null,
-      hotels: null
-    },
-
-    meta:{
-      flag: FLAG_US,
-      timezone:"America/New_York",
-      locale:"en-US",
-      countryCode:"US"
-    }
-  },
-
   {
     id:"rochester",
     role:"minor",
@@ -458,101 +423,68 @@ const WAYPOINTS = [
   },
 
   {
-    id:"kingston",
-    role:"minor",
-    mode:"Car",
-    coords:[-73.9974,41.927],
-    location:"Kingston NY",
+    id: "providence",
+    role: "minor",
+    mode: "Car",
+    coords: [-71.4128, 41.824],
 
-    names:{
-      display:"Waypoint – Kingston",
-      basic:"Kingston, NY",
-      city:"Kingston",
-      state:"NY",
-      country:"United States"
+    location: "Providence RI",
+    names: {
+      display: "Waypoint – Providence",
+      basic: "Providence, RI",
+      city: "Providence",
+      state: "RI",
+      country: "United States"
     },
 
-    description:"Hudson Valley waypoint.",
+    description: "Quick Rhode Island stop leaving Boston.",
     icon: ICON_MINOR,
-    image: IMG_KINGSTON,
+    image: IMG_PROVIDENCE,
 
-    links:{
+    links: {
       search: null,
       toilets: null,
       hotels: null
     },
 
-    meta:{
+    meta: {
       flag: FLAG_US,
-      timezone:"America/New_York",
-      locale:"en-US",
-      countryCode:"US"
+      timezone: "America/New_York",
+      locale: "en-US",
+      countryCode: "US"
     }
   },
 
   {
-    id:"newburgh",
-    role:"minor",
-    mode:"Car",
-    coords:[-74.0104,41.5034],
-    location:"Newburgh NY",
+    id: "newhaven",
+    role: "minor",
+    mode: "Car",
+    coords: [-72.9279, 41.3083],
 
-    names:{
-      display:"Waypoint – Newburgh",
-      basic:"Newburgh, NY",
-      city:"Newburgh",
-      state:"NY",
-      country:"United States"
+    location: "New Haven CT",
+    names: {
+      display: "Waypoint – New Haven",
+      basic: "New Haven, CT",
+      city: "New Haven",
+      state: "CT",
+      country: "United States"
     },
 
-    description:"Near Hudson bridge crossings.",
+    description: "Cruising coastal Connecticut en route to NYC.",
     icon: ICON_MINOR,
-    image: IMG_NEWBURGH,
+    image: IMG_NEWHAVEN,
 
-    links:{
+    links: {
       search: null,
       toilets: null,
       hotels: null
     },
 
-    meta:{
+    meta: {
       flag: FLAG_US,
-      timezone:"America/New_York",
-      locale:"en-US",
-      countryCode:"US"
-    }
-  },
-
-  {
-    id:"whiteplains",
-    role:"minor",
-    mode:"Car",
-    coords:[-73.7629,41.033],
-    location:"White Plains NY",
-
-    names:{
-      display:"Waypoint – White Plains",
-      basic:"White Plains, NY",
-      city:"White Plains",
-      state:"NY",
-      country:"United States"
-    },
-
-    description:"Before entering NYC region.",
-    icon: ICON_MINOR,
-    image: IMG_WHITEPLNS,
-
-    links:{
-      search: null,
-      toilets: null,
-      hotels: null
-    },
-
-    meta:{
-      flag: FLAG_US,
-      timezone:"America/New_York",
-      locale:"en-US",
-      countryCode:"US"
+      timezone: "America/New_York",
+      locale: "en-US",
+      countryCode: "US"
     }
   },
 
