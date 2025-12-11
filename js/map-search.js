@@ -165,13 +165,24 @@ window.loadPOIsForWaypoint = async function (
 const searchInput = document.getElementById("mapSearchInput");
 const searchResults = document.getElementById("mapSearchResults");
 
+const sidebarSearchInput = document.getElementById("detailsPoiSearchInput");
+const sidebarSearchResults = document.getElementById("detailsPoiSearchResults");
+
 let searchAbort = null;
 let searchMarkers = [];
+let sidebarSearchAbort = null;
+let sidebarMarkers = [];
+let sidebarSearchOrigin = null;
 
 /* ----- UTIL: clear all search markers ----- */
 function clearSearchMarkers() {
   searchMarkers.forEach(m => m.remove());
   searchMarkers = [];
+}
+
+function clearSidebarMarkers() {
+  sidebarMarkers.forEach(m => m.remove());
+  sidebarMarkers = [];
 }
 
 /* ----- UTIL: render global results list ----- */
@@ -192,6 +203,29 @@ function renderSearchResults(list) {
       </div>
     `
     )
+    .join("");
+}
+
+function renderSidebarResults(list) {
+  if (!sidebarSearchResults) return;
+
+  if (!list.length) {
+    sidebarSearchResults.innerHTML = `<div class="poi-empty">No results found.</div>`;
+    return;
+  }
+
+  sidebarSearchResults.innerHTML = list
+    .map(r => {
+      const dist =
+        typeof r.distance === "number" ? `${(r.distance / 1000).toFixed(1)} km away` : "";
+
+      return `
+        <div class="sidebar-search-item" data-id="${r.id}">
+          <div class="sidebar-search-title">${escapeHTML(r.name)}</div>
+          <div class="sidebar-search-address">${escapeHTML(r.address)}</div>
+          <div class="sidebar-search-distance">${dist}</div>
+        </div>`;
+    })
     .join("");
 }
 
@@ -230,9 +264,55 @@ if (searchResults) {
   });
 }
 
+if (sidebarSearchResults) {
+  sidebarSearchResults.addEventListener("click", e => {
+    const item = e.target.closest(".sidebar-search-item");
+    if (!item) return;
+
+    const id = item.dataset.id;
+    const r = latestSidebarResults.find(x => x.id === id);
+    if (!r || !r.coords) return;
+
+    const [lon, lat] = r.coords;
+
+    clearSidebarMarkers();
+
+    const marker = new mapboxgl.Marker({ color: "#FFA50D" })
+      .setLngLat([lon, lat])
+      .addTo(__MAP);
+
+    sidebarMarkers.push(marker);
+
+    __MAP.easeTo({
+      center: [lon, lat],
+      zoom: 13.2,
+      pitch: 50,
+      duration: 1100
+    });
+
+    const fakeWP = { coords: [lon, lat], meta: { timezone: "UTC" } };
+    if (typeof updateSunForWaypoint === "function") {
+      updateSunForWaypoint(fakeWP);
+    }
+  });
+}
+
 /* ===== GLOBAL SEARCH REQUEST ===== */
 
 let latestSearchResults = [];
+let latestSidebarResults = [];
+
+window.setSidebarSearchContext = function (coords, label = "") {
+  sidebarSearchOrigin = Array.isArray(coords) ? coords : null;
+  clearSidebarMarkers();
+  latestSidebarResults = [];
+
+  if (sidebarSearchInput) sidebarSearchInput.value = "";
+  if (sidebarSearchResults) {
+    const msg = label ? `Search near ${escapeHTML(label)}` : "Search for nearby places";
+    sidebarSearchResults.innerHTML = `<div class="poi-empty">${msg}</div>`;
+  }
+};
 
 async function performGlobalSearch(query) {
   if (!query || query.length < 2) {
@@ -269,6 +349,48 @@ async function performGlobalSearch(query) {
   }
 }
 
+async function performSidebarSearch(query) {
+  if (!sidebarSearchResults) return;
+
+  if (!query || query.length < 2) {
+    renderSidebarResults([]);
+    clearSidebarMarkers();
+    return;
+  }
+
+  if (sidebarSearchAbort) sidebarSearchAbort.abort();
+  sidebarSearchAbort = new AbortController();
+
+  const [lon, lat] =
+    Array.isArray(sidebarSearchOrigin) && sidebarSearchOrigin.length === 2
+      ? sidebarSearchOrigin
+      : (__MAP ? [__MAP.getCenter().lng, __MAP.getCenter().lat] : [0, 0]);
+
+  const url =
+    `https://api.mapbox.com/search/searchbox/v1/text/${encodeURIComponent(query)}` +
+    `?language=en&limit=6&proximity=${lon},${lat}&types=poi&access_token=${MAPBOX_SEARCH_TOKEN}`;
+
+  try {
+    const res = await fetch(url, { signal: sidebarSearchAbort.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (!data || !Array.isArray(data.features)) {
+      renderSidebarResults([]);
+      return;
+    }
+
+    latestSidebarResults = data.features.map(normalizePOI);
+    renderSidebarResults(latestSidebarResults);
+
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      console.error("Sidebar search failed:", err);
+      renderSidebarResults([]);
+    }
+  }
+}
+
 /* ----- THROTTLE INPUT ----- */
 let searchTimer = null;
 
@@ -278,6 +400,15 @@ if (searchInput) {
 
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => performGlobalSearch(q), 250);
+  });
+}
+
+if (sidebarSearchInput) {
+  sidebarSearchInput.addEventListener("input", () => {
+    const q = sidebarSearchInput.value.trim();
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => performSidebarSearch(q), 250);
   });
 }
 
