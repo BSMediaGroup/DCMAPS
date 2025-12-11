@@ -39,11 +39,13 @@ function normalizePOI(feature) {
 
   const name =
     feature.name ||
+    feature.text ||
     feature.properties?.name ||
     "Unnamed";
 
   const addr =
     feature.full_address ||
+    feature.place_name ||
     feature.properties?.full_address ||
     feature.properties?.address ||
     "";
@@ -326,8 +328,8 @@ async function performGlobalSearch(query) {
   searchAbort = new AbortController();
 
   const url =
-    `https://api.mapbox.com/search/searchbox/v1/text/${encodeURIComponent(query)}` +
-    `?language=en&limit=8&access_token=${MAPBOX_SEARCH_TOKEN}`;
+    `https://api.mapbox.com/search/searchbox/v1/forward?` +
+    `q=${encodeURIComponent(query)}&language=en&limit=8&access_token=${MAPBOX_SEARCH_TOKEN}`;
 
   try {
     const res = await fetch(url, { signal: searchAbort.signal });
@@ -367,8 +369,9 @@ async function performSidebarSearch(query) {
       : (__MAP ? [__MAP.getCenter().lng, __MAP.getCenter().lat] : [0, 0]);
 
   const url =
-    `https://api.mapbox.com/search/searchbox/v1/text/${encodeURIComponent(query)}` +
-    `?language=en&limit=6&proximity=${lon},${lat}&types=poi&access_token=${MAPBOX_SEARCH_TOKEN}`;
+    `https://api.mapbox.com/search/searchbox/v1/forward?` +
+    `q=${encodeURIComponent(query)}` +
+    `&language=en&limit=6&proximity=${lon},${lat}&types=poi&access_token=${MAPBOX_SEARCH_TOKEN}`;
 
   try {
     const res = await fetch(url, { signal: sidebarSearchAbort.signal });

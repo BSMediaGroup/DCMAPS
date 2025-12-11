@@ -153,6 +153,9 @@ window.openPopupFor = function (id) {
   if (p) {
     p.addTo(__MAP);
 
+    const closeBtn = p.getElement()?.querySelector(".mapboxgl-popup-close-button");
+    if (closeBtn) closeBtn.removeAttribute("aria-hidden");
+
     const wp = getWP(id);
     if (wp && MAP_READY && __MAP.getLayer("sky")) {
       updateSunForWaypoint(wp);
