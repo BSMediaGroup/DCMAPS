@@ -31,6 +31,10 @@ function getWP(id) {
   return WAYPOINTS.find(w => w.id === id);
 }
 
+/* Shared smooth easing for camera + polylines */
+const easeInOutCubic = t =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
 /* =======================================================================
    DISTANCE CALCULATIONS (1:1 FROM MONOLITH)
 ======================================================================= */
@@ -345,13 +349,9 @@ window.spinGlobe = function () {
   const targetCenter = DEFAULT_CENTER || [0, 0];
   const targetPitch  = DEFAULT_PITCH ?? 0;
 
-  // Keep the auto-spin aligned to the north–south axis with a level camera
-  // and a stable equatorial anchor.
-  map.setCenter(targetCenter);
-  map.setPitch(targetPitch);
-  map.setBearing(0);
-
-  map.setBearing(map.getBearing() + ORBIT_ROTATION_SPEED);
+  // Keep the auto-spin aligned to the north–south axis with a level camera.
+  const nextBearing = (map.getBearing() - ORBIT_ROTATION_SPEED + 360) % 360;
+  map.jumpTo({ center: targetCenter, pitch: targetPitch, bearing: nextBearing });
 
   requestAnimationFrame(window.spinGlobe);
 };
@@ -391,7 +391,8 @@ window.focusJourneyOrbit = function (id) {
     zoom,
     pitch: JOURNEY_PITCH_TARGET,
     bearing: MAP().getBearing(),
-    duration: ORBIT_ENTRY_DURATION
+    duration: ORBIT_ENTRY_DURATION + 250,
+    easing: easeInOutCubic
   });
 
   orbitEnterTimer = setTimeout(() => startOrbit(id), ORBIT_ENTRY_DURATION);
@@ -471,7 +472,7 @@ window.animateLeg = function (a, b) {
     map.setPaintProperty("journey-current", "line-dasharray", [1, 0]); // solid
   }
 
-  const duration = isF ? 4200 : 1800;
+  const duration = isF ? 5200 : 2600;
   const total = seg.length;
   const start = performance.now();
 
@@ -479,7 +480,8 @@ window.animateLeg = function (a, b) {
     if (!MAP_READY) return;
 
     const p = Math.min((t - start) / duration, 1);
-    const count = Math.max(2, Math.floor(p * total));
+    const eased = easeInOutCubic(p);
+    const count = Math.max(2, Math.floor(eased * total));
     const partial = seg.slice(0, count);
 
     map.getSource("journey-current").setData({
@@ -522,9 +524,9 @@ window.animateLeg = function (a, b) {
     const Syd = getWP(a);
     const LA  = getWP(b);
 
-    const P1 = 1600;
-    const P2 = 1600;
-    const P3 = 2200;
+    const P1 = 2100;
+    const P2 = 2300;
+    const P3 = 2600;
 
     map.easeTo({
       center: Syd.coords,
@@ -576,7 +578,8 @@ window.animateLeg = function (a, b) {
     zoom: isF ? 3.0 : 10.0,
     pitch: 0,
     bearing: 0,
-    duration: duration + 400
+    duration: duration + 900,
+    easing: easeInOutCubic
   });
 
   requestAnimationFrame(animatePolyline);
@@ -707,15 +710,16 @@ window.startJourney = function () {
 
   const wp = getWP(currentID);
 
-  const START1 = 1800;
-  const START2 = 2200;
+  const START1 = 2200;
+  const START2 = 2600;
 
   map.easeTo({
     center: wp.coords,
     zoom: 3.5,
     pitch: 0,
     bearing: map.getBearing(),
-    duration: START1
+    duration: START1,
+    easing: easeInOutCubic
   });
 
   setTimeout(() => {
@@ -724,7 +728,8 @@ window.startJourney = function () {
       zoom: ORBIT_ZOOM_TARGET,
       pitch: JOURNEY_PITCH_TARGET,
       bearing: map.getBearing(),
-      duration: START2
+      duration: START2,
+      easing: easeInOutCubic
     });
   }, START1);
 

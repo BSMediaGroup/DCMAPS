@@ -10,13 +10,14 @@ console.log("map-style.js loaded");
    BASE MAP STYLE — SUPER STABLE
 ------------------------------------------------------------ */
 
-const MAP_STYLE_URL = "mapbox://styles/mapbox/dark-v11";
+const MAP_STYLE_URL = "mapbox://styles/danielclancy/cmj1qph0p009b01sl62pcf0ib";
 
 /* IMPORTANT:
    This token is ONLY for the base map. DO NOT use the Search token.
 */
 mapboxgl.accessToken =
-  "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaW41d2xwNzJhYW0zZnB4bGR0eGNlZjYifQ.qTsXirOA9VxIE8TXHmihyw";
+  "pk.eyJ1IjoiZGFuaWVsY2xhbmN5IiwiYSI6ImNtaW41bG80YjF1OGEzY3BsOGc0c3hmcjEifQ.mzOhbS7w2aWqxNhSAZkg9g";
+mapboxgl.setTelemetryEnabled(false);
 
 /* ------------------------------------------------------------
    CREATE MAP INSTANCE

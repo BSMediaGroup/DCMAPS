@@ -28,7 +28,7 @@ const IMG_LOSANGELES = "https://raw.githubusercontent.com/BSMediaGroup/Resources
 const IMG_TORONTO    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/toronto.webp";
 const IMG_HAMILTON   = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/hamilton.webp";
 const IMG_NIAGARA    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/niagara.webp";
-const IMG_BUFFALO    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/buffalo.webp";
+const IMG_BOSTON     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/dce5946f2d2d347ed5f2af26c8a5e7be80eab943/IMG/boston.webp";
 const IMG_BATAVIA    = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/batavia.webp";
 const IMG_ROCHESTER  = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/rochester.webp";
 const IMG_GENEVA     = "https://raw.githubusercontent.com/BSMediaGroup/Resources/master/IMG/geneva.webp";
@@ -219,42 +219,6 @@ const WAYPOINTS = [
       timezone:"America/Toronto",
       locale:"en-CA",
       countryCode:"CA"
-    }
-  },
-
-  /* ————————————————— BUFFALO ————————————————— */
-  {
-    id:"buffalo",
-    role:"major",
-    mode:"Car",
-    coords:[-78.73351075487278,42.93973725814752],
-
-    location:"Buffalo Niagara Intl Airport",
-
-    names:{
-      display:"Major Waypoint – Buffalo",
-      basic:"Buffalo, NY",
-      city:"Buffalo",
-      state:"NY",
-      country:"United States"
-    },
-
-    description:"Picking up Gina flying in from Boston.",
-
-    icon: ICON_MAJOR,
-    image: IMG_BUFFALO,
-
-    links:{
-      search: null,
-      toilets: null,
-      hotels: null
-    },
-
-    meta:{
-      flag: FLAG_US,
-      timezone:"America/New_York",
-      locale:"en-US",
-      countryCode:"US"
     }
   },
 
@@ -454,6 +418,42 @@ const WAYPOINTS = [
       timezone:"America/New_York",
       locale:"en-US",
       countryCode:"US"
+    }
+  },
+
+  /* ————————————————— BOSTON ————————————————— */
+  {
+    id: "boston",
+    role: "major",
+    mode: "Car",
+    coords: [-71.0589, 42.3601],
+
+    location: "Boston, Massachusetts",
+
+    names: {
+      display: "Major Waypoint – Boston",
+      basic: "Boston, MA",
+      city: "Boston",
+      state: "MA",
+      country: "United States"
+    },
+
+    description: "Arriving in Boston to pick up dear GeenaR the hard aRling ❤️",
+
+    icon: ICON_MAJOR,
+    image: IMG_BOSTON,
+
+    links: {
+      search: null,
+      toilets: null,
+      hotels: null
+    },
+
+    meta: {
+      flag: FLAG_US,
+      timezone: "America/New_York",
+      locale: "en-US",
+      countryCode: "US"
     }
   },
 
