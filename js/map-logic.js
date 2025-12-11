@@ -99,79 +99,30 @@ window.initDistances = function () {
 };
 
 /* =======================================================================
-   GREAT CIRCLE BUILDER — ZIGZAG FIX (1:1 FROM MONOLITH)
+   GREAT CIRCLE BUILDER — TURF-POWERED TO AVOID WRAP ARTIFACTS
 ======================================================================= */
-
-function normalizeCoord(lon, lat, prevLon = null) {
-  // Keep latitude in safe bounds for globe projection.
-  const clampedLat = Math.max(-89.999999, Math.min(89.999999, lat));
-
-  // Wrap longitude to the [-180, 180] range but preserve segment continuity
-  // to avoid Mapbox drawing a zigzag when crossing the international dateline.
-  let wrappedLon = ((lon + 540) % 360) - 180;
-
-  if (prevLon != null) {
-    const delta = wrappedLon - prevLon;
-    if (Math.abs(delta) > 180) {
-      wrappedLon += delta > 0 ? -360 : 360;
-    }
-  }
-
-  return [wrappedLon, clampedLat];
-}
 
 window.buildGreatCircle = function (fromId, toId, steps = 220) {
   const A = getWP(fromId);
   const B = getWP(toId);
   if (!A || !B) return [];
 
-  const [lon1d, lat1] = A.coords;
-  const [lon2d, lat2] = B.coords;
-
-  let λ1 = toRad(lon1d);
-  let λ2 = toRad(lon2d);
-  const φ1 = toRad(lat1);
-  const φ2 = toRad(lat2);
-
-  let dλ = λ2 - λ1;
-
-  if (Math.abs(dλ) > Math.PI) {
-    if (dλ > 0) λ1 += 2 * Math.PI;
-    else λ2 += 2 * Math.PI;
-    dλ = λ2 - λ1;
+  try {
+    const gc = turf.greatCircle(A.coords, B.coords, { npoints: steps });
+    if (gc?.geometry?.coordinates?.length) return gc.geometry.coordinates;
+  } catch (err) {
+    console.warn("greatCircle fallback (turf failed)", err);
   }
 
-  const Δ = 2 * Math.asin(Math.sqrt(
-    Math.sin((φ2 - φ1) / 2) ** 2 +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(dλ / 2) ** 2
-  ));
-
-  if (!Number.isFinite(Δ) || Δ === 0) {
-    return [normalizeCoord(lon1d, lat1), normalizeCoord(lon2d, lat2, lon1d)];
-  }
-
-  const out = [];
-  let prevLon = null;
-
+  // Fallback: straight interpolation to avoid gaps if turf fails
+  const coords = [];
   for (let i = 0; i <= steps; i++) {
-    const f = i / steps;
-    const A1 = Math.sin((1 - f) * Δ) / Math.sin(Δ);
-    const B1 = Math.sin(f * Δ) / Math.sin(Δ);
-
-    const x = A1 * Math.cos(φ1) * Math.cos(λ1) + B1 * Math.cos(φ2) * Math.cos(λ2);
-    const y = A1 * Math.cos(φ1) * Math.sin(λ1) + B1 * Math.cos(φ2) * Math.sin(λ2);
-    const z = A1 * Math.sin(φ1) + B1 * Math.sin(φ2);
-
-    const φ = Math.atan2(z, Math.sqrt(x * x + y * y));
-    const λ = Math.atan2(y, x);
-
-    const coord = normalizeCoord(λ * 180 / Math.PI, φ * 180 / Math.PI, prevLon);
-    prevLon = coord[0];
-
-    out.push(coord);
+    const t = i / steps;
+    const lon = A.coords[0] + (B.coords[0] - A.coords[0]) * t;
+    const lat = A.coords[1] + (B.coords[1] - A.coords[1]) * t;
+    coords.push([lon, lat]);
   }
-
-  return out;
+  return coords;
 };
 
 /* =======================================================================
@@ -348,10 +299,18 @@ window.spinGlobe = function () {
   const map = MAP();
   const targetCenter = DEFAULT_CENTER || [0, 0];
   const targetPitch  = DEFAULT_PITCH ?? 0;
+  const targetZoom   = DEFAULT_ZOOM ?? map.getZoom();
 
   // Keep the auto-spin aligned to the north–south axis with a level camera.
   const nextBearing = (map.getBearing() - ORBIT_ROTATION_SPEED + 360) % 360;
-  map.jumpTo({ center: targetCenter, pitch: targetPitch, bearing: nextBearing });
+  map.easeTo({
+    center: targetCenter,
+    zoom: targetZoom,
+    pitch: targetPitch,
+    bearing: nextBearing,
+    duration: 0,
+    easing: t => t
+  });
 
   requestAnimationFrame(window.spinGlobe);
 };
@@ -430,16 +389,37 @@ window.buildCompleteUntil = function (id) {
    JOURNEY ANIMATION — FIXED LINESTYLE + STATIC ROUTES
 ======================================================================= */
 
-window.animateLeg = function (a, b) {
+window.animateLeg = async function (a, b) {
   if (a === b) return;
   if (!MAP_READY) return;
 
   const map = MAP();
   stopOrbit();
+  window.__ANIMATING__ = true;
+  document.body.classList.add("journey-animating");
 
   const isF = (a === "sydney" && b === "la") || (a === "la" && b === "toronto");
   const seg = isF ? buildGreatCircle(a, b) : roadLeg(a, b);
-  if (!seg.length) return;
+  if (!seg.length) {
+    document.body.classList.remove("journey-animating");
+    window.__ANIMATING__ = false;
+    return;
+  }
+
+  const zoomOutTarget = isF ? 3.2 : 7.4;
+  if (map.getZoom() > zoomOutTarget * 0.8) {
+    await new Promise(resolve => {
+      map.easeTo({
+        center: map.getCenter(),
+        zoom: zoomOutTarget,
+        pitch: 0,
+        bearing: map.getBearing(),
+        duration: 900,
+        easing: easeInOutCubic
+      });
+      map.once("moveend", resolve);
+    });
+  }
 
   const comp = buildCompleteUntil(a);
 
@@ -472,7 +452,7 @@ window.animateLeg = function (a, b) {
     map.setPaintProperty("journey-current", "line-dasharray", [1, 0]); // solid
   }
 
-  const duration = isF ? 5200 : 2600;
+  const duration = isF ? 6800 : 3600;
   const total = seg.length;
   const start = performance.now();
 
@@ -514,6 +494,9 @@ window.animateLeg = function (a, b) {
       openPopupFor(b);
       focusJourneyOrbit(b);
       updateHUD();
+
+      setTimeout(() => document.body.classList.remove("journey-animating"), 120);
+      window.__ANIMATING__ = false;
     }
   }
 
@@ -524,9 +507,9 @@ window.animateLeg = function (a, b) {
     const Syd = getWP(a);
     const LA  = getWP(b);
 
-    const P1 = 2100;
-    const P2 = 2300;
-    const P3 = 2600;
+    const P1 = 2400;
+    const P2 = 2700;
+    const P3 = 3000;
 
     map.easeTo({
       center: Syd.coords,
@@ -534,7 +517,7 @@ window.animateLeg = function (a, b) {
       pitch: 0,
       bearing: map.getBearing(),
       duration: P1,
-      easing: t => t * t * (3 - 2 * t)
+      easing: easeInOutCubic
     });
 
     setTimeout(() => {
@@ -544,7 +527,7 @@ window.animateLeg = function (a, b) {
         pitch: 0,
         bearing: map.getBearing(),
         duration: P2,
-        easing: t => t * t * (3 - 2 * t)
+        easing: easeInOutCubic
       });
     }, P1);
 
@@ -555,7 +538,7 @@ window.animateLeg = function (a, b) {
         pitch: JOURNEY_PITCH_TARGET,
         bearing: map.getBearing(),
         duration: P3,
-        easing: t => t * t * (3 - 2 * t)
+        easing: easeInOutCubic
       });
     }, P1 + P2);
 
@@ -564,6 +547,8 @@ window.animateLeg = function (a, b) {
       openPopupFor(b);
       startOrbit(b);
       updateHUD();
+      setTimeout(() => document.body.classList.remove("journey-animating"), 120);
+      window.__ANIMATING__ = false;
     }, P1 + P2 + P3);
 
     requestAnimationFrame(animatePolyline);
@@ -575,10 +560,10 @@ window.animateLeg = function (a, b) {
 
   map.easeTo({
     center: wp.coords,
-    zoom: isF ? 3.0 : 10.0,
+    zoom: isF ? 3.2 : 9.0,
     pitch: 0,
     bearing: 0,
-    duration: duration + 900,
+    duration: duration + 1100,
     easing: easeInOutCubic
   });
 
@@ -626,6 +611,8 @@ window.resetJourney = function () {
 
   const map = MAP();
 
+  document.body.classList.remove("journey-animating");
+  window.__ANIMATING__ = false;
   journeyMode = false;
   spinning = true;
   userInterrupted = false;

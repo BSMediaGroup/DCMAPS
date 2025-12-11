@@ -166,12 +166,15 @@ window.loadPOIsForWaypoint = async function (
 /* DOM elements must already exist (Option-C UI installed in HTML) */
 const searchInput = document.getElementById("mapSearchInput");
 const searchResults = document.getElementById("mapSearchResults");
+const floatingSearch = document.getElementById("floatingSearch");
+const floatingToggle = document.getElementById("floatingSearchToggle");
 
 const sidebarSearchInput = document.getElementById("detailsPoiSearchInput");
 const sidebarSearchResults = document.getElementById("detailsPoiSearchResults");
 
 let searchAbort = null;
 let searchMarkers = [];
+let searchPopup = null;
 let sidebarSearchAbort = null;
 let sidebarMarkers = [];
 let sidebarSearchOrigin = null;
@@ -180,6 +183,8 @@ let sidebarSearchOrigin = null;
 function clearSearchMarkers() {
   searchMarkers.forEach(m => m.remove());
   searchMarkers = [];
+  if (searchPopup) searchPopup.remove();
+  searchPopup = null;
 }
 
 function clearSidebarMarkers() {
@@ -251,12 +256,33 @@ if (searchResults) {
 
     searchMarkers.push(marker);
 
+    if (typeof stopOrbit === "function") stopOrbit();
+
+    const zoom = (window.ORBIT_ZOOM_TARGET || 14.5) - 0.8;
+    const pitch = window.ORBIT_PITCH_TARGET || 60;
+
     __MAP.easeTo({
       center: [lon, lat],
-      zoom: 12.5,
-      pitch: 55,
-      duration: 1200
+      zoom,
+      pitch,
+      bearing: __MAP.getBearing(),
+      duration: 1400,
+      easing: t => t * t * (3 - 2 * t)
     });
+
+    if (searchPopup) searchPopup.remove();
+    searchPopup = new mapboxgl.Popup({ offset: 22, closeOnClick: true })
+      .setLngLat([lon, lat])
+      .setHTML(`
+        <div class="trip-popup">
+          <div class="trip-popup-title">
+            <span>${escapeHTML(r.name)}</span>
+          </div>
+          <div class="trip-popup-location">${escapeHTML(r.address || "")}</div>
+          <div class="trip-popup-body">${escapeHTML(r.address || "")}</div>
+        </div>
+      `)
+      .addTo(__MAP);
 
     // Update sun for this location
     const fakeWP = { coords: [lon, lat], meta: { timezone: "UTC" } };
@@ -404,6 +430,8 @@ if (searchInput) {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => performGlobalSearch(q), 250);
   });
+
+  searchInput.addEventListener("focus", () => setSearchCollapsed(false));
 }
 
 if (sidebarSearchInput) {
@@ -411,7 +439,22 @@ if (sidebarSearchInput) {
     const q = sidebarSearchInput.value.trim();
 
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => performSidebarSearch(q), 250);
+  searchTimer = setTimeout(() => performSidebarSearch(q), 250);
+  });
+}
+
+/* ----- Floating toggle handling ----- */
+function setSearchCollapsed(collapsed) {
+  if (!floatingSearch) return;
+  floatingSearch.classList.toggle("collapsed", collapsed);
+  if (floatingToggle) floatingToggle.setAttribute("aria-expanded", (!collapsed).toString());
+}
+
+if (floatingToggle) {
+  floatingToggle.addEventListener("click", () => {
+    const nextState = !floatingSearch || floatingSearch.classList.contains("collapsed");
+    setSearchCollapsed(!nextState);
+    if (!nextState) searchInput?.focus();
   });
 }
 
